@@ -48,7 +48,7 @@
 	<dependency>
 		<groupId>gov.nist.hit.core.hl7v2</groupId>
 		<artifactId>hit-core-hl7v2-api</artifactId>
-		<version>1.0.10</version>
+		<version>${hitcorehl7v2.version}</version>
 	</dependency>
 	<dependency>
 			<groupId>javax.servlet</groupId>
@@ -59,4 +59,7 @@
 	</dependencies>
 
 
+	<properties>
+		<hitcorehl7v2.version>1.0.11-SNAPSHOT</hitcorehl7v2.version>
+	</properties>
 </project>

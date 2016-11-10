@@ -76,13 +76,8 @@ public class HL7V2UploadController {
       InputStream profileStream = IOUtils.toInputStream(content);
       Profile p = XMLDeserializer.deserialize(profileStream).get();
         
+      List<UploadedProfileModel>  list = getUploadedProfiles(content);
       
-      ArrayList<UploadedProfileModel> list = new ArrayList<UploadedProfileModel>();
-      for (String s : getConformanceProfileIds(content)){
-       	ProfileModel pm = parser.parse(p.messages().apply(s),null);
-       	profileModelsMap.put(s,pm );
-       	list.add(initUploadedProfileModel(pm));
-      }
       map.put("profiles", list);
       logger.info("Uplaoded profile file "+part.getName());
       return map;   
@@ -162,20 +157,30 @@ public class HL7V2UploadController {
 	    UploadedProfileModel upm = new UploadedProfileModel();
 	    upm.setActivated(false);
 	    upm.setId(pm.getMessage().getId());
-	    upm.setName(pm.getMessage().getId());
-	    
+	    upm.setName(pm.getMessage().getName());
+	    upm.setType(pm.getMessage().getType());
+	    upm.setDescription(pm.getMessage().getDescription());
 	    return upm;
 	  }
   
-  public String[] getConformanceProfileIds(String xml) {
+  public List<UploadedProfileModel> getUploadedProfiles(String xml) {
 	    Document doc = this.toDoc(xml);
 	    NodeList nodes =  doc.getElementsByTagName("Message");
-	    String[] res = new String[nodes.getLength()];
+	    List<UploadedProfileModel> list = new ArrayList<UploadedProfileModel>();
 	    for (int i = 0 ; i <nodes.getLength(); i++ ){
-	    	Element elmIntegrationProfile =  (Element) nodes.item(i);
-	    	res[i] = elmIntegrationProfile.getAttribute("ID");
+	    	Element elmIntegrationProfile =  (Element) nodes.item(i);	
+	    	UploadedProfileModel upm = new UploadedProfileModel();
+		    upm.setActivated(false);
+		    upm.setId(elmIntegrationProfile.getAttribute("ID"));
+		    upm.setName(elmIntegrationProfile.getAttribute("Name"));
+		    upm.setType(elmIntegrationProfile.getAttribute("Type"));
+		    upm.setEvent(elmIntegrationProfile.getAttribute("Event"));
+		    upm.setStructID(elmIntegrationProfile.getAttribute("StructID"));
+		    upm.setIdentifier(elmIntegrationProfile.getAttribute("Identifier"));
+		    upm.setDescription(elmIntegrationProfile.getAttribute("Description"));
+		    list.add(upm);
 	    }
-	    return res;
+	    return list;
 	  }
   
   private Document toDoc(String xmlSource) {

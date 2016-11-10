@@ -21,6 +21,15 @@ public class UploadedProfileModel {
 
 		private String name;
 		private String id;
+		private String type;
+		private String description;
+		private String identifier;
+		private String event;
+		private String structID;
+		
+		
+		
+		
 		private boolean activated;
 		
 		public UploadedProfileModel() {
@@ -49,6 +58,36 @@ public class UploadedProfileModel {
 		}
 		public void setActivated(boolean activated) {
 			this.activated = activated;
+		}
+		public String getType() {
+			return type;
+		}
+		public void setType(String type) {
+			this.type = type;
+		}
+		public String getDescription() {
+			return description;
+		}
+		public void setDescription(String description) {
+			this.description = description;
+		}
+		public String getIdentifier() {
+			return identifier;
+		}
+		public void setIdentifier(String identifier) {
+			this.identifier = identifier;
+		}
+		public String getEvent() {
+			return event;
+		}
+		public void setEvent(String event) {
+			this.event = event;
+		}
+		public String getStructID() {
+			return structID;
+		}
+		public void setStructID(String structID) {
+			this.structID = structID;
 		}
 
 	  
