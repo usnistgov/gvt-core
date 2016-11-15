@@ -1,0 +1,88 @@
+package gov.nist.hit.gvt.api;
+
+import java.io.File;
+import java.io.IOException;
+
+import gov.nist.hit.core.domain.ResourceUploadResult;
+import gov.nist.hit.gvt.domain.GVTTestCaseGroup;
+import gov.nist.hit.gvt.domain.SessionTestCases;
+import gov.nist.hit.gvt.domain.UploadStatus;
+import gov.nist.hit.gvt.exception.NoUserFoundException;
+import gov.nist.hit.gvt.repository.GVTTestCaseGroupRepository;
+import gov.nist.hit.gvt.service.BundleHandler;
+import gov.nist.hit.gvt.service.UserIdService;
+
+import org.apache.commons.io.FileUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+
+@RequestMapping("/gvt")
+@Controller
+public class HL7V2CFTestCaseController {
+
+	@Autowired
+	private GVTTestCaseGroupRepository testCaseGroupRepository;
+	
+	@Autowired
+	private UserIdService userIdService;
+
+	@Autowired
+	private BundleHandler bundleHandler;
+	
+
+	@PreAuthorize("hasRole('tester')")
+	@RequestMapping(value = "/bundle/upload", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@ResponseBody
+	public UploadStatus bundle(@RequestPart("file") MultipartFile file) {
+		try {
+			if(!file.isEmpty()){
+				Long userId = userIdService.getCurrentUserId();
+				if(userId == null)
+					throw new NoUserFoundException();
+				
+				String directory = bundleHandler.unzip(file.getBytes());
+				GVTTestCaseGroup group = bundleHandler.unbundle(directory);
+				FileUtils.deleteDirectory(new File(directory));
+				group.setUserId(userId);
+				testCaseGroupRepository.saveAndFlush(group);
+				return new UploadStatus(ResourceUploadResult.SUCCESS,"Test Cases Group has been added");
+			}
+			else {
+				return new UploadStatus(ResourceUploadResult.FAILURE,"Submitted bundle is empty");
+			}
+		}
+		catch(IOException e){
+			return new UploadStatus(ResourceUploadResult.FAILURE,"IO Error could not read bundle");
+		} catch (NoUserFoundException e) {
+			return new UploadStatus(ResourceUploadResult.FAILURE,"No User Found");
+		} catch (Exception e) {
+			return new UploadStatus(ResourceUploadResult.FAILURE,"Could not read bundle, "
+					+ "please check that format is correct");
+		}
+		
+
+	}
+
+	@PreAuthorize("hasRole('tester')")
+	@RequestMapping(value = "/testcases", method = RequestMethod.POST)
+	@ResponseBody
+	public SessionTestCases testcases() throws NoUserFoundException {
+		
+		Long userId = userIdService.getCurrentUserId();
+		
+		if(userId == null)
+			throw new NoUserFoundException();
+
+		SessionTestCases stc = new SessionTestCases();
+  		stc.setPreloaded(testCaseGroupRepository.findByPreloaded(true));
+  		stc.setUser(testCaseGroupRepository.userExclusive(userId));
+  		return stc;
+
+	}
+}
