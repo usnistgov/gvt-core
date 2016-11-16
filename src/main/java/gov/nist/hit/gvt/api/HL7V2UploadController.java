@@ -15,6 +15,7 @@ package gov.nist.hit.gvt.api;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +41,8 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import gov.nist.healthcare.resources.domain.XMLError;
+import gov.nist.healthcare.resources.xds.ValidateXSD;
 import gov.nist.hit.core.domain.ProfileModel;
 import gov.nist.hit.core.hl7v2.service.HL7V2ProfileParserImpl;
 import gov.nist.hit.core.service.ProfileParser;
@@ -66,26 +69,37 @@ public class HL7V2UploadController {
 
   @RequestMapping(value = "/uploadprofile", method = RequestMethod.POST,  consumes = {"multipart/form-data"})
   @ResponseBody
-  public Map<String, List<UploadedProfileModel>> uploadprofile(@RequestPart("file") MultipartFile part)
+  public Map<String, Object> uploadprofile(@RequestPart("file") MultipartFile part)
       throws MessageUploadException {
     try {
-      Map<String, List<UploadedProfileModel>> map = new HashMap<String, List<UploadedProfileModel>>();
+      ValidateXSD v = new ValidateXSD();
+      Map<String, Object> map = new HashMap<String, Object>();
       InputStream in = part.getInputStream();
-
       String content = IOUtils.toString(in);
-      InputStream profileStream = IOUtils.toInputStream(content);
-      Profile p = XMLDeserializer.deserialize(profileStream).get();
-        
-      List<UploadedProfileModel>  list = getUploadedProfiles(content);
+      List<XMLError> errors = v.validateProfile(content); 
       
-      map.put("profiles", list);
-      logger.info("Uplaoded profile file "+part.getName());
+      if (errors.size() >0){
+    	  map.put("success", false); 
+    	  map.put("errors", errors); 
+    	  logger.info("Uploaded profile file with errors "+part.getName());
+      }else{
+    	  List<UploadedProfileModel>  list = getUploadedProfiles(content);
+    	  map.put("success", true); 
+          map.put("profiles", list); 
+          logger.info("Uploaded valid profile file "+part.getName());
+      }
+      
       return map;   
     } catch (RuntimeException e) {
+    	e.printStackTrace();
       throw new MessageUploadException(e);
-    } catch (Exception e) {
-      throw new MessageUploadException(e);
-    }
+    } catch (URISyntaxException e) {
+		e.printStackTrace();
+		throw new MessageUploadException(e);
+	} catch (IOException e) {
+		e.printStackTrace();
+		throw new MessageUploadException(e);
+	} 
   }
   
   @RequestMapping(value = "/addtestcases", method = RequestMethod.POST)
@@ -109,19 +123,24 @@ public class HL7V2UploadController {
 
   @RequestMapping(value = "/uploadvs", method = RequestMethod.POST,  consumes = {"multipart/form-data"})
   @ResponseBody
-  public Map<String, String> uploadvs(@RequestPart("file") MultipartFile part)
+  public Map<String, Object> uploadvs(@RequestPart("file") MultipartFile part)
       throws MessageUploadException {
-    try {
-      Map<String, String> map = new HashMap<String, String>();
-      InputStream in = part.getInputStream();
-      map.put("name", part.getName());
-      map.put("size", part.getSize() + "");
-      String content = IOUtils.toString(in);
-      map.put("content", content);
-      System.out.println("uploaded vs");
-//	  TODO check if existing and add selected value set file
-      logger.info("Uplaoded value set file "+part.getName());
-      return map;
+    try {	
+    	ValidateXSD v = new ValidateXSD();
+        Map<String, Object> map = new HashMap<String, Object>();
+        InputStream in = part.getInputStream();
+        String content = IOUtils.toString(in);
+        List<XMLError> errors = v.validateVocabulary(content); 
+        
+        if (errors.size() >0){
+      	  map.put("success", false); 
+      	  map.put("errors", errors); 
+      	  logger.info("Uploaded value set file with errors "+part.getName());
+        }else{
+      	  map.put("success", true);            
+          logger.info("Uploaded value set file "+part.getName());
+        }     
+        return map;   
     } catch (RuntimeException e) {
       throw new MessageUploadException(e);
     } catch (Exception e) {
@@ -131,19 +150,24 @@ public class HL7V2UploadController {
 
   @RequestMapping(value = "/uploadcontraints", method = RequestMethod.POST,  consumes = {"multipart/form-data"})
   @ResponseBody
-  public Map<String, String> uploadcontraints(@RequestPart("file") MultipartFile part)
+  public Map<String, Object> uploadcontraints(@RequestPart("file") MultipartFile part)
       throws MessageUploadException {
     try {
-      Map<String, String> map = new HashMap<String, String>();
-      InputStream in = part.getInputStream();
-      map.put("name", part.getName());
-      map.put("size", part.getSize() + "");
-      String content = IOUtils.toString(in);
-      map.put("content", content);
-      System.out.println("uploaded contraints");
-//	  TODO check if existing and add selected constraint file
-      logger.info("Uplaoded constraint file "+part.getName());
-      return map;
+    	ValidateXSD v = new ValidateXSD();
+        Map<String, Object> map = new HashMap<String, Object>();
+        InputStream in = part.getInputStream();
+        String content = IOUtils.toString(in);
+        List<XMLError> errors = v.validateConstraints(content); 
+        
+        if (errors.size() >0){
+      	  map.put("success", false); 
+      	  map.put("errors", errors); 
+      	  logger.info("Uploaded constraints file with errors "+part.getName());
+        }else{
+      	  map.put("success", true);            
+          logger.info("Uploaded constraints file "+part.getName());
+        }     
+        return map;   
     } catch (RuntimeException e) {
       throw new MessageUploadException(e);
     } catch (Exception e) {

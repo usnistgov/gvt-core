@@ -51,6 +51,11 @@
 		<version>${hitcorehl7v2.version}</version>
 	</dependency>
 	<dependency>
+		<groupId>gov.nist.healthcare.resources</groupId>
+	    <artifactId>validation</artifactId>
+	    <version>${resourcesValidation.version}</version>
+	</dependency>
+	<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
 			<version>3.1.0</version>
@@ -61,5 +66,6 @@
 
 	<properties>
 		<hitcorehl7v2.version>1.0.11-SNAPSHOT</hitcorehl7v2.version>
+		<resourcesValidation.version>0.0.2-SNAPSHOT</resourcesValidation.version>
 	</properties>
 </project>
