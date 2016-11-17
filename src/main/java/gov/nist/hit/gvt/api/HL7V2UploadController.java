@@ -20,12 +20,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.IOUtils;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -47,9 +50,8 @@ import gov.nist.hit.core.domain.ProfileModel;
 import gov.nist.hit.core.hl7v2.service.HL7V2ProfileParserImpl;
 import gov.nist.hit.core.service.ProfileParser;
 import gov.nist.hit.core.service.exception.MessageUploadException;
+import gov.nist.hit.gvt.domain.TestCaseWrapper;
 import gov.nist.hit.gvt.domain.UploadedProfileModel;
-import hl7.v2.profile.Profile;
-import hl7.v2.profile.XMLDeserializer;
 import io.swagger.annotations.Api;
 
 /**
@@ -65,7 +67,9 @@ public class HL7V2UploadController {
   
   ProfileParser parser = new HL7V2ProfileParserImpl();
 
-  private final Map<String, ProfileModel> profileModelsMap = new HashMap<String, ProfileModel>();
+  private final TreeMap<String, MultipartFile> profileFileMap = new TreeMap<String, MultipartFile>();
+  private final List<MultipartFile> valueSetFileList = new ArrayList<MultipartFile>();
+  private final List<MultipartFile> constraintFileList = new ArrayList<MultipartFile>();
 
   @RequestMapping(value = "/uploadprofile", method = RequestMethod.POST,  consumes = {"multipart/form-data"})
   @ResponseBody
@@ -80,12 +84,15 @@ public class HL7V2UploadController {
       
       if (errors.size() >0){
     	  map.put("success", false); 
-    	  map.put("errors", errors); 
+    	  map.put("errors", errors);    	  
     	  logger.info("Uploaded profile file with errors "+part.getName());
       }else{
     	  List<UploadedProfileModel>  list = getUploadedProfiles(content);
     	  map.put("success", true); 
           map.put("profiles", list); 
+          for (UploadedProfileModel upm : list){
+              profileFileMap.put(upm.getId(), part);
+          }
           logger.info("Uploaded valid profile file "+part.getName());
       }
       
@@ -104,19 +111,36 @@ public class HL7V2UploadController {
   
   @RequestMapping(value = "/addtestcases", method = RequestMethod.POST)
   @ResponseBody
-  public boolean addtestcases(@RequestBody List<UploadedProfileModel> list) {
-	  for (UploadedProfileModel upm : list){
-		  
-//		  TODO add selected testcase
-//		  profileModelsMap.get(upm.getId());
+  public boolean addtestcases(@RequestBody TestCaseWrapper wrapper) {
+	  
+	  JSONObject testCaseJson = new JSONObject();
+	  testCaseJson.put("name", wrapper.getTestcasename());
+	  testCaseJson.put("description", wrapper.getTestcasedescription());
+	  testCaseJson.put("profile",profileFileMap.firstEntry().getValue().getOriginalFilename());
+	  if (!constraintFileList.isEmpty()){
+		  testCaseJson.put("constraints",constraintFileList.get(0).getOriginalFilename());  
 	  }
+	  if (!valueSetFileList.isEmpty()){
+		  testCaseJson.put("vs",valueSetFileList.get(0).getOriginalFilename());
+	  }
+	  JSONArray testSteps = new JSONArray();
+	  for (UploadedProfileModel upm : wrapper.getTestcases()){
+		  profileFileMap.get(upm.getId());
+		  JSONObject ts = new JSONObject();
+		  ts.put("name",upm.getName());
+		  ts.put("messageId",upm.getId());
+		  testSteps.put(ts);
+	  }
+	  testCaseJson.put("testCases", testSteps);
     return true;
   }
  
   @RequestMapping(value = "/cleartestcases", method = RequestMethod.POST)
   @ResponseBody
   public boolean cleartestcases() {
-	  profileModelsMap.clear();
+	  profileFileMap.clear();
+	  valueSetFileList.clear();
+	  constraintFileList.clear();
 	  return true;
   }
   
@@ -137,7 +161,8 @@ public class HL7V2UploadController {
       	  map.put("errors", errors); 
       	  logger.info("Uploaded value set file with errors "+part.getName());
         }else{
-      	  map.put("success", true);            
+      	  map.put("success", true);
+      	  valueSetFileList.add(part);
           logger.info("Uploaded value set file "+part.getName());
         }     
         return map;   
@@ -164,7 +189,8 @@ public class HL7V2UploadController {
       	  map.put("errors", errors); 
       	  logger.info("Uploaded constraints file with errors "+part.getName());
         }else{
-      	  map.put("success", true);            
+      	  map.put("success", true);        
+      	  constraintFileList.add(part);
           logger.info("Uploaded constraints file "+part.getName());
         }     
         return map;   
