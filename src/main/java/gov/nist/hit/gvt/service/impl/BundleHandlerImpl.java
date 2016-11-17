@@ -28,6 +28,7 @@ import gov.nist.hit.core.hl7v2.domain.HL7V2TestContext;
 import gov.nist.hit.core.service.ResourceLoader;
 import gov.nist.hit.core.service.exception.ProfileParserException;
 import gov.nist.hit.core.service.util.FileUtil;
+import gov.nist.hit.gvt.domain.GVTSaveInstance;
 import gov.nist.hit.gvt.domain.GVTTestCaseGroup;
 import gov.nist.hit.gvt.service.BundleHandler;
 
@@ -72,13 +73,17 @@ public class BundleHandlerImpl implements BundleHandler {
 	}
 	
 	@Override
-	public GVTTestCaseGroup unbundle(String dir) throws IOException, ProfileParserException{
+	public GVTSaveInstance unbundle(String dir) throws IOException, ProfileParserException{
 		resourceLoader.setDirectory(dir+"/");
+		GVTSaveInstance save = new GVTSaveInstance();
 		Resource res = resourceLoader.getResource("TestCases.json");
+//		System.out.println(dir);
 		if(res == null){
 			throw new IllegalArgumentException("No TestCases.json found");
 		}
+		
 		GVTTestCaseGroup gtcg = new GVTTestCaseGroup();
+		save.tcg = gtcg;
 		String descriptorContent = FileUtil.getContent(res);
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode testCasesObj = mapper.readTree(descriptorContent);
@@ -94,7 +99,7 @@ public class BundleHandlerImpl implements BundleHandler {
 			throw new IllegalArgumentException("Profile "+profileName+" not found");
 		}
 		IntegrationProfile p = resourceLoader.integrationProfile(FileUtil.getContent(profile));
-
+		save.ip = p;
 		// Constraints
 		String constraintName = testCasesObj.findValue("constraints").asText();
 		Resource constraints = resourceLoader.getResource(constraintName);
@@ -102,7 +107,7 @@ public class BundleHandlerImpl implements BundleHandler {
 			throw new IllegalArgumentException("Constraints "+constraintName+" not found");
 		}
 		Constraints c = resourceLoader.constraint(FileUtil.getContent(constraints));
-		
+		save.ct = c;
 		// VS
 		String vocabName = testCasesObj.findValue("vs").asText();
 		Resource vs = resourceLoader.getResource(vocabName);
@@ -110,14 +115,17 @@ public class BundleHandlerImpl implements BundleHandler {
 			throw new IllegalArgumentException("VocabularyLibrary "+vocabName+" not found");
 		}
 		VocabularyLibrary v = resourceLoader.vocabLibrary(FileUtil.getContent(vs));
-		
+		save.vs = v;
 		List<CFTestInstance> testCases = new ArrayList<>();
 		Iterator<JsonNode> testCasesIter = testCasesObj.findValue("testCases").elements();
+		int i = 1;
 		while(testCasesIter.hasNext()){
+			JsonNode tcO = testCasesIter.next();
 			CFTestInstance cfti = new CFTestInstance();
-			String messageId = testCasesObj.findValue("messageId").asText();
-			String name = testCasesObj.findValue("name").asText();
-			String description = testCasesObj.findValue("description").asText();
+			cfti.setPosition(i++);
+			String messageId = tcO.findValue("messageId").asText();
+			String name = tcO.findValue("name").asText();
+			String description = tcO.findValue("description").asText();
 			
 			//---
 			ConformanceProfile conformanceProfile = new ConformanceProfile();
@@ -143,6 +151,6 @@ public class BundleHandlerImpl implements BundleHandler {
 		}
 		
 		gtcg.setTestCases(testCases);
-		return gtcg;
+		return save;
 	}
 }
