@@ -12,6 +12,9 @@
 
 package gov.nist.hit.gvt.api;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -21,11 +24,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -67,9 +73,9 @@ public class HL7V2UploadController {
   
   ProfileParser parser = new HL7V2ProfileParserImpl();
 
-  private final TreeMap<String, MultipartFile> profileFileMap = new TreeMap<String, MultipartFile>();
-  private final List<MultipartFile> valueSetFileList = new ArrayList<MultipartFile>();
-  private final List<MultipartFile> constraintFileList = new ArrayList<MultipartFile>();
+  private final TreeMap<String, File> profileFileMap = new TreeMap<String, File>();
+  private final List<File> valueSetFileList = new ArrayList<File>();
+  private final List<File> constraintFileList = new ArrayList<File>();
 
   @RequestMapping(value = "/uploadprofile", method = RequestMethod.POST,  consumes = {"multipart/form-data"})
   @ResponseBody
@@ -91,7 +97,9 @@ public class HL7V2UploadController {
     	  map.put("success", true); 
           map.put("profiles", list); 
           for (UploadedProfileModel upm : list){
-              profileFileMap.put(upm.getId(), part);
+        	  File profileFile = new File(part.getName());
+        	  FileUtils.writeStringToFile(profileFile,content);
+              profileFileMap.put(upm.getId(), profileFile);
           }
           logger.info("Uploaded valid profile file "+part.getName());
       }
@@ -112,16 +120,15 @@ public class HL7V2UploadController {
   @RequestMapping(value = "/addtestcases", method = RequestMethod.POST)
   @ResponseBody
   public boolean addtestcases(@RequestBody TestCaseWrapper wrapper) {
-	  
 	  JSONObject testCaseJson = new JSONObject();
 	  testCaseJson.put("name", wrapper.getTestcasename());
 	  testCaseJson.put("description", wrapper.getTestcasedescription());
-	  testCaseJson.put("profile",profileFileMap.firstEntry().getValue().getOriginalFilename());
+	  testCaseJson.put("profile",profileFileMap.firstEntry().getValue().getName());
 	  if (!constraintFileList.isEmpty()){
-		  testCaseJson.put("constraints",constraintFileList.get(0).getOriginalFilename());  
+		  testCaseJson.put("constraints",constraintFileList.get(0).getName());  
 	  }
 	  if (!valueSetFileList.isEmpty()){
-		  testCaseJson.put("vs",valueSetFileList.get(0).getOriginalFilename());
+		  testCaseJson.put("vs",valueSetFileList.get(0).getName());
 	  }
 	  JSONArray testSteps = new JSONArray();
 	  for (UploadedProfileModel upm : wrapper.getTestcases()){
@@ -132,9 +139,39 @@ public class HL7V2UploadController {
 		  testSteps.put(ts);
 	  }
 	  testCaseJson.put("testCases", testSteps);
-    return true;
+	  File jsonFile = new File("TestCases.json");
+	  
+	  
+	  List<File> files = new ArrayList<File>();
+	  try {
+		  
+		  if (!constraintFileList.isEmpty()){
+
+			  files.add(valueSetFileList.get(0));
+		  }
+		  if (!valueSetFileList.isEmpty()){
+			  files.add(valueSetFileList.get(0));
+		  }
+		  files.add(profileFileMap.firstEntry().getValue());
+		    
+		  FileUtils.writeStringToFile(jsonFile, testCaseJson.toString());
+		  files.add(jsonFile);
+	  
+	  
+	  } catch (IOException e) {
+			e.printStackTrace();
+		}
+	  File zip = zip(files ,"testcase.xml");
+
+	  //TODO send to api to add
+	  return true;
   }
  
+  
+
+  
+  
+  
   @RequestMapping(value = "/cleartestcases", method = RequestMethod.POST)
   @ResponseBody
   public boolean cleartestcases() {
@@ -162,7 +199,10 @@ public class HL7V2UploadController {
       	  logger.info("Uploaded value set file with errors "+part.getName());
         }else{
       	  map.put("success", true);
-      	  valueSetFileList.add(part);
+      	  
+      	  File vsFile = new File(part.getName());
+      	  FileUtils.writeStringToFile(vsFile,content);
+      	  valueSetFileList.add(vsFile);
           logger.info("Uploaded value set file "+part.getName());
         }     
         return map;   
@@ -189,8 +229,11 @@ public class HL7V2UploadController {
       	  map.put("errors", errors); 
       	  logger.info("Uploaded constraints file with errors "+part.getName());
         }else{
-      	  map.put("success", true);        
-      	  constraintFileList.add(part);
+      	  map.put("success", true);     
+      	  
+      	  File constraintFile = new File(part.getName());
+    	  FileUtils.writeStringToFile(constraintFile,content);
+      	  constraintFileList.add(constraintFile);
           logger.info("Uploaded constraints file "+part.getName());
         }     
         return map;   
@@ -252,5 +295,35 @@ public class HL7V2UploadController {
 	    return null;
 	  }
   
+  
+  public  File zip(List<File> files, String filename) {
+	    File zipfile = new File(filename);
+	    // Create a buffer for reading the files
+	    byte[] buf = new byte[1024];
+	    try {
+	        // create the ZIP file
+	        ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipfile));
+	        // compress the files
+	        for(int i=0; i<files.size(); i++) {
+	            FileInputStream in = new FileInputStream(files.get(i).getName());
+	            // add ZIP entry to output stream
+	            out.putNextEntry(new ZipEntry(files.get(i).getName()));
+	            // transfer bytes from the file to the ZIP file
+	            int len;
+	            while((len = in.read(buf)) > 0) {
+	                out.write(buf, 0, len);
+	            }
+	            // complete the entry
+	            out.closeEntry();
+	            in.close();
+	        }
+	        // complete the ZIP file
+	        out.close();
+	        return zipfile;
+	    } catch (IOException ex) {
+	        System.err.println(ex.getMessage());
+	    }
+	    return null;
+	}
 
 }
