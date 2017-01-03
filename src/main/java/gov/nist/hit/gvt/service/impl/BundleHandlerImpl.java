@@ -6,11 +6,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -19,17 +22,18 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Files;
 
-import gov.nist.hit.core.domain.CFTestInstance;
+import gov.nist.healthcare.resources.domain.XMLError;
 import gov.nist.hit.core.domain.ConformanceProfile;
 import gov.nist.hit.core.domain.Constraints;
 import gov.nist.hit.core.domain.IntegrationProfile;
+import gov.nist.hit.core.domain.UserCFTestInstance;
+import gov.nist.hit.core.domain.UserTestCaseGroup;
 import gov.nist.hit.core.domain.VocabularyLibrary;
 import gov.nist.hit.core.hl7v2.domain.HL7V2TestContext;
 import gov.nist.hit.core.service.ResourceLoader;
 import gov.nist.hit.core.service.exception.ProfileParserException;
 import gov.nist.hit.core.service.util.FileUtil;
 import gov.nist.hit.gvt.domain.GVTSaveInstance;
-import gov.nist.hit.gvt.domain.GVTTestCaseGroup;
 import gov.nist.hit.gvt.service.BundleHandler;
 
 @Service
@@ -77,19 +81,18 @@ public class BundleHandlerImpl implements BundleHandler {
 		resourceLoader.setDirectory(dir+"/");
 		GVTSaveInstance save = new GVTSaveInstance();
 		Resource res = resourceLoader.getResource("TestCases.json");
-//		System.out.println(dir);
 		if(res == null){
 			throw new IllegalArgumentException("No TestCases.json found");
 		}
 		
-		GVTTestCaseGroup gtcg = new GVTTestCaseGroup();
+		UserTestCaseGroup gtcg = new UserTestCaseGroup();
 		save.tcg = gtcg;
 		String descriptorContent = FileUtil.getContent(res);
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode testCasesObj = mapper.readTree(descriptorContent);
 		
-		gtcg.setName(testCasesObj.findValue("name").asText());
-		gtcg.setDescription(testCasesObj.findValue("description").asText());
+		gtcg.setName(testCasesObj.get("name").asText());
+		gtcg.setDescription(testCasesObj.get("description").asText());
 		gtcg.setPreloaded(false);
 		
 		// Profile
@@ -116,12 +119,12 @@ public class BundleHandlerImpl implements BundleHandler {
 		}
 		VocabularyLibrary v = resourceLoader.vocabLibrary(FileUtil.getContent(vs));
 		save.vs = v;
-		List<CFTestInstance> testCases = new ArrayList<>();
+		List<UserCFTestInstance> testCases = new ArrayList<>(); 
 		Iterator<JsonNode> testCasesIter = testCasesObj.findValue("testCases").elements();
 		int i = 1;
 		while(testCasesIter.hasNext()){
 			JsonNode tcO = testCasesIter.next();
-			CFTestInstance cfti = new CFTestInstance();
+			UserCFTestInstance cfti = new UserCFTestInstance();
 			cfti.setPosition(i++);
 			String messageId = tcO.findValue("messageId").asText();
 			String name = tcO.findValue("name").asText();
@@ -137,10 +140,10 @@ public class BundleHandlerImpl implements BundleHandler {
 			conformanceProfile.setSourceId(messageId);
 			//---
 			HL7V2TestContext testContext = new HL7V2TestContext();
-			testContext.setVocabularyLibrary(v);
-			testContext.setConstraints(c);
+			testContext.setVocabularyLibrary(v); 
+			testContext.setConstraints(c);	
 			testContext.setConformanceProfile(conformanceProfile);
-			testContext.setDqa(false);
+			testContext.setDqa(false); 
 			//---
 			cfti.setName(name);
 			cfti.setDescription(description);
@@ -153,4 +156,38 @@ public class BundleHandlerImpl implements BundleHandler {
 		gtcg.setTestCases(testCases);
 		return save;
 	}
+	
+	
+	public String getProfileContentFromZipDirectory(String dir) throws IOException{
+		resourceLoader.setDirectory(findFileDirectory(dir,"Profile.xml")+"/");
+		Resource profile = resourceLoader.getResource("Profile.xml");
+		return  FileUtil.getContent(profile);
+	}
+	
+	public String getValueSetContentFromZipDirectory(String dir) throws IOException{
+		resourceLoader.setDirectory(findFileDirectory(dir,"ValueSets.xml")+"/");
+		Resource profile = resourceLoader.getResource("ValueSets.xml");
+		return  FileUtil.getContent(profile);
+	}
+	
+	public String getConstraintContentFromZipDirectory(String dir) throws IOException{
+		resourceLoader.setDirectory(findFileDirectory(dir,"Constraints.xml")+"/");
+		Resource profile = resourceLoader.getResource("Constraints.xml");
+		return  FileUtil.getContent(profile);
+	}
+	
+	// finds folder where file is found (first occurence)
+		private String findFileDirectory(String dir, String fileName) {
+			Collection files = FileUtils.listFiles(new File(dir), null, true);
+			for (Iterator iterator = files.iterator(); iterator.hasNext();) {
+				File file = (File) iterator.next();
+				if (file.getName().equals(fileName)) {
+					return file.getParentFile().getAbsolutePath();
+				}
+			}
+			return null;
+		}
+	
+	
+	
 }

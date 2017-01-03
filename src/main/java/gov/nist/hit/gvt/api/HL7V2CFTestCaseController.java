@@ -4,19 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.security.Principal;
 
-import gov.nist.hit.core.domain.ResourceUploadResult;
-import gov.nist.hit.core.repo.ConstraintsRepository;
-import gov.nist.hit.core.repo.IntegrationProfileRepository;
-import gov.nist.hit.core.repo.VocabularyLibraryRepository;
-import gov.nist.hit.gvt.domain.GVTSaveInstance;
-import gov.nist.hit.gvt.domain.GVTTestCaseGroup;
-import gov.nist.hit.gvt.domain.SessionTestCases;
-import gov.nist.hit.gvt.domain.UploadStatus;
-import gov.nist.hit.gvt.exception.NoUserFoundException;
-import gov.nist.hit.gvt.repository.GVTTestCaseGroupRepository;
-import gov.nist.hit.gvt.service.BundleHandler;
-import gov.nist.hit.gvt.service.UserIdService;
-
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,12 +15,25 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import gov.nist.hit.core.domain.ResourceUploadResult;
+import gov.nist.hit.core.domain.UserTestCaseGroup;
+import gov.nist.hit.core.repo.ConstraintsRepository;
+import gov.nist.hit.core.repo.IntegrationProfileRepository;
+import gov.nist.hit.core.repo.VocabularyLibraryRepository;
+import gov.nist.hit.gvt.domain.GVTSaveInstance;
+import gov.nist.hit.gvt.domain.SessionTestCases;
+import gov.nist.hit.gvt.domain.UploadStatus;
+import gov.nist.hit.gvt.exception.NoUserFoundException;
+import gov.nist.hit.gvt.repository.UserTestCaseGroupRepository;
+import gov.nist.hit.gvt.service.BundleHandler;
+import gov.nist.hit.gvt.service.UserIdService;
+
 @RequestMapping("/gvt")
 @Controller
 public class HL7V2CFTestCaseController {
 
 	@Autowired
-	private GVTTestCaseGroupRepository testCaseGroupRepository;
+	private UserTestCaseGroupRepository testCaseGroupRepository;
 	
 	@Autowired
 	private IntegrationProfileRepository ipRepository;
@@ -112,7 +112,7 @@ public class HL7V2CFTestCaseController {
 	@RequestMapping(value = "/preload/{id}", method = RequestMethod.GET)
 	@ResponseBody
 	public UploadStatus preload(@PathVariable Long id,Principal principal) throws NoUserFoundException {
-		GVTTestCaseGroup find = testCaseGroupRepository.findOne(id);
+		UserTestCaseGroup find = testCaseGroupRepository.findOne(id);
 		if(find != null){
 			find.setPreloaded(true);
 			testCaseGroupRepository.save(find);
@@ -121,7 +121,6 @@ public class HL7V2CFTestCaseController {
 		else {
 			return new UploadStatus(ResourceUploadResult.FAILURE,"TestCase Group "+id+" not found");
 		}
-		
 	}
 	
 }

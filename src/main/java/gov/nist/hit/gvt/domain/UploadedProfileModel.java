@@ -26,6 +26,7 @@ public class UploadedProfileModel {
 		private String identifier;
 		private String event;
 		private String structID;
+		private boolean used;
 		
 		
 		
@@ -88,6 +89,12 @@ public class UploadedProfileModel {
 		}
 		public void setStructID(String structID) {
 			this.structID = structID;
+		}
+		public boolean isUsed() {
+			return used;
+		}
+		public void setUsed(boolean used) {
+			this.used = used;
 		}
 
 	  
