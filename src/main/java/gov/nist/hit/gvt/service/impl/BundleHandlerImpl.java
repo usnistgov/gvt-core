@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Random;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Files;
 
-import gov.nist.healthcare.resources.domain.XMLError;
 import gov.nist.hit.core.domain.ConformanceProfile;
 import gov.nist.hit.core.domain.Constraints;
 import gov.nist.hit.core.domain.IntegrationProfile;
@@ -95,6 +94,7 @@ public class BundleHandlerImpl implements BundleHandler {
 		gtcg.setDescription(testCasesObj.get("description").asText());
 		gtcg.setPreloaded(false);
 		
+		 
 		// Profile
 		String profileName = testCasesObj.findValue("profile").asText();
 		Resource profile = resourceLoader.getResource(profileName);
@@ -129,7 +129,10 @@ public class BundleHandlerImpl implements BundleHandler {
 			String messageId = tcO.findValue("messageId").asText();
 			String name = tcO.findValue("name").asText();
 			String description = tcO.findValue("description").asText();
+			Long id = new Random().nextLong();
 			
+			
+			 
 			//---
 			ConformanceProfile conformanceProfile = new ConformanceProfile();
 			conformanceProfile.setJson(
@@ -149,6 +152,7 @@ public class BundleHandlerImpl implements BundleHandler {
 			cfti.setDescription(description);
 			cfti.setRoot(true);
 			cfti.setTestContext(testContext);
+			cfti.setPersistentId(id);
 			//---
 			testCases.add(cfti);
 		}

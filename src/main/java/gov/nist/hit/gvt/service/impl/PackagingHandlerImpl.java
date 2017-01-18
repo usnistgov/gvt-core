@@ -59,7 +59,9 @@ public class PackagingHandlerImpl implements PackagingHandler {
 		    upm.setDescription(elmIntegrationProfile.getAttribute("Description"));
 		    
 		    if (cachedRepository.getCachedProfiles().containsKey(elmIntegrationProfile.getAttribute("ID"))) {
-		    	upm.setUsed(true);
+		    	//remove them from cache or it will trigger an error.
+		    	cachedRepository.getCachedProfiles().remove(elmIntegrationProfile.getAttribute("ID"));
+		    	upm.setUsed(false);
 		    }else{
 		    	upm.setUsed(false);
 		    }
