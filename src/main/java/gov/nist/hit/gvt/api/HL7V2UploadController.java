@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.codec.Base64;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,6 +49,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.google.common.io.Files;
 
+import gov.nist.auth.hit.core.domain.util.UserUtil;
 import gov.nist.healthcare.resources.domain.XMLError;
 import gov.nist.hit.core.domain.ResourceUploadResult;
 import gov.nist.hit.core.domain.UserCFTestInstance;
@@ -112,6 +114,11 @@ public class HL7V2UploadController {
 	@Autowired
 	private FileValidationHandler fileValidationHandler;
 
+//	private String zipDirectoryIGAMT = null;
+//	private final List<File> profileFileListIGAMT = new ArrayList<File>();
+//	private final List<File> valueSetFileListIGAMT = new ArrayList<File>();
+//	private final List<File> constraintFileListIGAMT = new ArrayList<File>();
+	
 	private final List<File> profileFileList = new ArrayList<File>();
 	private final List<File> valueSetFileList = new ArrayList<File>();
 	private final List<File> constraintFileList = new ArrayList<File>();
@@ -130,8 +137,8 @@ public class HL7V2UploadController {
 			if (userId == null)
 				throw new NoUserFoundException();
 
-			InputStream in = part.getInputStream();
-			String content = IOUtils.toString(in);
+//			InputStream in = part.getInputStream();
+//			String content = IOUtils.toString(in);
 
 			String directory = bundleHandler.unzip(part.getBytes());
 			Map<String, List<XMLError>> errorMap = fileValidationHandler.unbundleAndValidate(directory);
@@ -182,6 +189,120 @@ public class HL7V2UploadController {
 		}
 		return resultMap;
 	}
+	
+	
+	@PreAuthorize("hasRole('tester')")
+	@RequestMapping(value = "/upload/igamtuploadzip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@ResponseBody
+	public Map<String, Object> igamtuploadzip(ServletRequest request, @RequestPart("file") MultipartFile part, Principal p)
+			throws MessageUploadException {
+		Map<String, Object> resultMap = new HashMap<String, Object>();
+		try {
+			if (!part.getContentType().equalsIgnoreCase("application/zip"))
+				throw new MessageUploadException("Unsupported content type. Supported content types are: '.zip' ");
+
+			Long userId = userIdService.getCurrentUserId(p);
+			if (userId == null)
+				throw new NoUserFoundException();
+
+
+			String directory = bundleHandler.unzip(part.getBytes());
+//			zipDirectoryIGAMT = directory;
+			Map<String, List<XMLError>> errorMap = fileValidationHandler.unbundleAndValidate(directory);
+			String profileContent = bundleHandler.getProfileContentFromZipDirectory(directory);
+			
+
+			if (errorMap.get("profileErrors").size() > 0 || errorMap.get("constraintsErrors").size() > 0
+					|| errorMap.get("vsErrors").size() > 0) {
+				resultMap.put("success", false);
+				resultMap.put("profileErrors", errorMap.get("profileErrors"));
+				resultMap.put("constraintsErrors", errorMap.get("constraintsErrors"));
+				resultMap.put("vsErrors", errorMap.get("vsErrors"));
+				logger.info("Uploaded profile file with errors " + part.getName());
+			} else {
+				List<UploadedProfileModel> list = packagingHandler.getUploadedProfiles(profileContent);
+				resultMap.put("success", true);
+				resultMap.put("profiles", list);
+				
+				
+				String token = userId + UserUtil.generateRandom();
+			    byte[] bs = Base64.encode(token.getBytes());
+			    token = new String(bs, "UTF-8");
+			    resultMap.put("token", token);
+				
+				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + token + "/" + userId + "/profile.xml"));
+				FileUtils.writeStringToFile(profileFile, bundleHandler.getProfileContentFromZipDirectory(directory));
+//				profileFileListIGAMT.add(profileFile);
+				
+				File valueSetFile = new File(request.getServletContext().getRealPath("tmp/" + token + "/" + userId + "/vs.xml"));
+				FileUtils.writeStringToFile(valueSetFile, bundleHandler.getValueSetContentFromZipDirectory(directory));
+//				valueSetFileListIGAMT.add(valueSetFile);
+				
+				File constraintFile = new File(request.getServletContext().getRealPath("tmp/" + token + "/" + userId + "/constraint.xml"));
+				FileUtils.writeStringToFile(constraintFile, bundleHandler.getConstraintContentFromZipDirectory(directory));
+//				constraintFileListIGAMT.add(constraintFile);
+				
+
+				logger.info("Uploaded valid zip File file " + part.getName());
+			}
+
+			
+		} catch (NoUserFoundException e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "User not found error");
+			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
+			return resultMap;
+		} catch (Exception e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured");
+			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
+			return resultMap;
+		}
+		return resultMap;
+	}
+	
+	
+	@PreAuthorize("hasRole('tester')")
+	@RequestMapping(value = "/upload/igamtuploadzipprofiles", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@ResponseBody
+	public Map<String, Object> uploadedzipprofile(ServletRequest request, String token, Principal p)
+			throws MessageUploadException {
+		Map<String, Object> resultMap = new HashMap<String, Object>();
+		try {
+
+			Long userId = userIdService.getCurrentUserId(p);
+			if (userId == null)
+				throw new NoUserFoundException();
+
+			String zipDirectoryIGAMT = request.getServletContext().getRealPath("tmp/" + token + "/" + userId);
+			if (zipDirectoryIGAMT == null)
+				throw new MessageUploadException("Zip files not found for this user");
+			
+			String profileContent = bundleHandler.getProfileContentFromZipDirectory(zipDirectoryIGAMT);
+			
+
+			List<UploadedProfileModel> list = packagingHandler.getUploadedProfiles(profileContent);
+			resultMap.put("success", true);
+			resultMap.put("profiles", list);	
+			FileUtils.deleteDirectory(new File(zipDirectoryIGAMT));
+
+			logger.info("retrieved profile info from IGAMT upload");
+
+			
+		} catch (NoUserFoundException e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "User not found error");
+			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
+			return resultMap;
+		} catch (Exception e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured");
+			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
+			return resultMap;
+		}
+		return resultMap;
+	}
+	
 	
 	@PreAuthorize("hasRole('tester')")
 	@RequestMapping(value = "/upload/uploadprofile", method = RequestMethod.POST, consumes = { "multipart/form-data" })
@@ -417,6 +538,91 @@ public class HL7V2UploadController {
 			return false;
 		} catch (IOException e) {
 			return false;
+		}
+
+	}
+	
+	
+	@PreAuthorize("hasRole('tester')")
+	@RequestMapping(value = "/igamtaddtestcases", method = RequestMethod.POST)
+	@ResponseBody
+	public UploadStatus igamtaddtestcases(ServletRequest request, @RequestBody TestCaseWrapper wrapper, Principal p) {
+		try {
+			Long userId = userIdService.getCurrentUserId(p);
+			if (userId == null)
+				throw new NoUserFoundException();
+				File zip;
+				
+				// dealing with individual files
+				JSONObject testCaseJson = new JSONObject();
+				testCaseJson.put("name", wrapper.getTestcasename());
+				testCaseJson.put("description", wrapper.getTestcasedescription());
+				testCaseJson.put("profile", "profile.xml");
+				testCaseJson.put("constraints", "constraint.xml");
+				testCaseJson.put("vs", "vs.xml");
+				
+				JSONArray testSteps = new JSONArray();
+				for (UploadedProfileModel upm : wrapper.getTestcases()) {
+					JSONObject ts = new JSONObject();
+					ts.put("name", upm.getName());
+					ts.put("messageId", upm.getId());
+					ts.put("description", upm.getDescription());
+					testSteps.put(ts);
+				}
+				testCaseJson.put("testCases", testSteps);
+				File jsonFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/TestCases.json"));
+				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/profile.xml"));
+				File constraintsFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/constraints.xml"));
+				File vsFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/vs.xml"));
+				
+				List<File> files = new ArrayList<File>();
+
+				if (!constraintFileList.isEmpty()) {
+					packagingHandler.changeConstraintId(constraintsFile);
+					files.add(constraintsFile);
+				}
+				if (!valueSetFileList.isEmpty()) {
+					packagingHandler.changeVsId(vsFile);
+					files.add(vsFile);
+				}
+
+				InputStream targetStream = new FileInputStream(profileFile);
+				String content = IOUtils.toString(targetStream);
+				String cleanedContent = packagingHandler.removeUnusedAndDuplicateMessages(content, wrapper.getTestcases());
+				FileUtils.writeStringToFile(profileFile, cleanedContent);
+				packagingHandler.changeProfileId(profileFile);
+				files.add(profileFile);
+
+				FileUtils.writeStringToFile(jsonFile, testCaseJson.toString());
+				files.add(jsonFile);
+				zip = packagingHandler.zip(files,
+				request.getServletContext().getRealPath("tmp/" + userId + "/testcase.zip"));
+//			}
+
+			if (zip != null) {
+				//fix this step no need to zip to unzip just after...
+				String directory2 = bundleHandler.unzip(Files.toByteArray(zip));
+				GVTSaveInstance si = bundleHandler.unbundle(directory2);
+				FileUtils.deleteDirectory(new File(directory2));
+				FileUtils.deleteDirectory(new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId)));
+				ipRepository.save(si.ip);
+				csRepository.save(si.ct);
+				vsRepository.save(si.vs);
+				si.tcg.setUserId(userId);
+				testCaseGroupRepository.saveAndFlush(si.tcg);
+
+				return new UploadStatus(ResourceUploadResult.SUCCESS, "Test Cases Group has been added");
+			} else {
+				return new UploadStatus(ResourceUploadResult.FAILURE, "Submitted bundle is empty");
+			}
+		} catch (IOException e) {
+			return new UploadStatus(ResourceUploadResult.FAILURE, "IO Error could not read bundle");
+		} catch (NoUserFoundException e) {
+			return new UploadStatus(ResourceUploadResult.FAILURE, "No User Found");
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new UploadStatus(ResourceUploadResult.FAILURE,
+					"Could not read bundle, " + "please check that format is correct");
 		}
 
 	}
