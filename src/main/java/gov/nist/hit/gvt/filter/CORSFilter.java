@@ -17,7 +17,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 
 @WebFilter(urlPatterns = "*")
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.LOWEST_PRECEDENCE)
 public class CORSFilter implements Filter {
 
 	/*
@@ -52,7 +52,7 @@ public class CORSFilter implements Filter {
 			httpResponse.setHeader("Access-Control-Allow-Origin", "*");
 			httpResponse.setHeader("Access-Control-Allow-Credentials", "true");
 		    httpResponse.setHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
-		    httpResponse.setHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers,Origin,Accept,X-Requested-With,Content-Type,Access-Control-Request-Method,Access-Control-Request-Headers,**Authorization**");
+		    httpResponse.setHeader("Access-Control-Allow-Headers", "Access-Control-Allow-Headers,Origin,Accept,X-Requested-With,Content-Type,Access-Control-Request-Method,Access-Control-Request-Headers,Authorization,appVersion,rsbVersion");
 
 			// httpResponse.setHeader("Access-Control-Expose-Headers", "dTime");
 		}
