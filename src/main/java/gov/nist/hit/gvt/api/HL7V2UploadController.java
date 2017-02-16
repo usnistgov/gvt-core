@@ -63,6 +63,7 @@ import gov.nist.hit.core.service.exception.MessageUploadException;
 import gov.nist.hit.gvt.domain.GVTSaveInstance;
 import gov.nist.hit.gvt.domain.LongResult;
 import gov.nist.hit.gvt.domain.TestCaseWrapper;
+import gov.nist.hit.gvt.domain.Token;
 import gov.nist.hit.gvt.domain.UploadStatus;
 import gov.nist.hit.gvt.domain.UploadedProfileModel;
 import gov.nist.hit.gvt.exception.NoUserFoundException;
@@ -265,7 +266,7 @@ public class HL7V2UploadController {
 	@PreAuthorize("hasRole('tester')")
 	@RequestMapping(value = "/upload/igamtuploadzipprofiles", method = RequestMethod.POST)
 	@ResponseBody
-	public Map<String, Object> uploadedzipprofile(ServletRequest request, String token, Principal p)
+	public Map<String, Object> igamtuploadzipprofiles(ServletRequest request,@RequestBody Token token, Principal p)
 			throws MessageUploadException {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
 		try {
@@ -274,7 +275,7 @@ public class HL7V2UploadController {
 			if (userId == null)
 				throw new NoUserFoundException();
 
-			String zipDirectoryIGAMT = request.getServletContext().getRealPath("tmp/" + token + "/" + userId);
+			String zipDirectoryIGAMT = request.getServletContext().getRealPath("tmp/" + token.getToken() + "/" + userId);
 			if (zipDirectoryIGAMT == null)
 				throw new MessageUploadException("Zip files not found for this user");
 			
