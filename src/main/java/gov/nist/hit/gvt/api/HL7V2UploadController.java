@@ -543,6 +543,27 @@ public class HL7V2UploadController {
 
 	}
 	
+	@PreAuthorize("hasRole('tester')")
+	@RequestMapping(value = "/igamtcleartestcases", method = RequestMethod.POST)
+	@ResponseBody
+	public boolean igamtcleartestcases(ServletRequest request, @RequestBody Token token, Principal p) {
+
+		try {
+			Long userId = userIdService.getCurrentUserId(p);
+			if (userId == null)
+				throw new NoUserFoundException();
+			FileUtils.deleteDirectory(new File(request.getServletContext().getRealPath("tmp/" + token.getToken() + "/" + userId)));
+	
+			return true;
+		} catch (NoUserFoundException e) {
+			return false;
+		} catch (IOException e) {
+			return false;
+		}
+
+	}
+	
+	
 	
 	@PreAuthorize("hasRole('tester')")
 	@RequestMapping(value = "/igamtaddtestcases", method = RequestMethod.POST)
