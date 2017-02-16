@@ -263,7 +263,7 @@ public class HL7V2UploadController {
 	
 	
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/upload/igamtuploadzipprofiles", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@RequestMapping(value = "/upload/igamtuploadzipprofiles", method = RequestMethod.POST)
 	@ResponseBody
 	public Map<String, Object> uploadedzipprofile(ServletRequest request, String token, Principal p)
 			throws MessageUploadException {
