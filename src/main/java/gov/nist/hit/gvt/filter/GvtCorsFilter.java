@@ -18,7 +18,7 @@ import org.springframework.core.annotation.Order;
 
 @WebFilter(urlPatterns = "*")
 @Order(Ordered.LOWEST_PRECEDENCE)
-public class CORSFilter implements Filter {
+public class GvtCorsFilter implements Filter {
 
 	/*
 	 * flaw: Browser Mime Sniffing - fix: X-Content-Type-Options flaw: Cached
@@ -49,6 +49,10 @@ public class CORSFilter implements Filter {
 
 		if (response instanceof HttpServletResponse) {
 			HttpServletResponse httpResponse = (HttpServletResponse) response;
+			httpResponse.setHeader("X-Frame-Options", "SAMEORIGIN");
+			httpResponse.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+			httpResponse.setHeader("X-Content-Type-Options", "nosniff");
+			httpResponse.setHeader("X-XSS-Protection", "1; mode=block");
 			httpResponse.setHeader("Access-Control-Allow-Origin", "*");
 			httpResponse.setHeader("Access-Control-Allow-Credentials", "true");
 		    httpResponse.setHeader("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
