@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.servlet.ServletRequest;
 
@@ -224,11 +225,8 @@ public class HL7V2UploadController {
 				List<UploadedProfileModel> list = packagingHandler.getUploadedProfiles(profileContent);
 				resultMap.put("success", true);
 				resultMap.put("profiles", list);
-				
-				
-				String token = userId + UserUtil.generateRandom();
-			    byte[] bs = Base64.encode(token.getBytes());
-			    token = new String(bs, "UTF-8");
+			
+				String token =  UUID.randomUUID().toString();
 			    resultMap.put("token", token);
 				
 				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + token + "/" + userId + "/profile.xml"));
