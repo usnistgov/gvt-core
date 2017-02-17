@@ -160,11 +160,11 @@ public class HL7V2UploadController {
 				resultMap.put("success", true);
 				resultMap.put("profiles", list);
 				
-				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/profile.xml"));
+				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/Profile.xml"));
 				FileUtils.writeStringToFile(profileFile, bundleHandler.getProfileContentFromZipDirectory(directory));
 				profileFileList.add(profileFile);
 				
-				File valueSetFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/vs.xml"));
+				File valueSetFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/ValueSets.xml"));
 				FileUtils.writeStringToFile(valueSetFile, bundleHandler.getValueSetContentFromZipDirectory(directory));
 				valueSetFileList.add(valueSetFile);
 				
@@ -229,11 +229,11 @@ public class HL7V2UploadController {
 				String token =  UUID.randomUUID().toString();
 			    resultMap.put("token", token);
 				
-				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + token + "/" + userId + "/profile.xml"));
+				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + token + "/" + userId + "/Profile.xml"));
 				FileUtils.writeStringToFile(profileFile, bundleHandler.getProfileContentFromZipDirectory(directory));
 //				profileFileListIGAMT.add(profileFile);
 				
-				File valueSetFile = new File(request.getServletContext().getRealPath("tmp/" + token + "/" + userId + "/vs.xml"));
+				File valueSetFile = new File(request.getServletContext().getRealPath("tmp/" + token + "/" + userId + "/ValueSets.xml"));
 				FileUtils.writeStringToFile(valueSetFile, bundleHandler.getValueSetContentFromZipDirectory(directory));
 //				valueSetFileListIGAMT.add(valueSetFile);
 				
@@ -330,7 +330,7 @@ public class HL7V2UploadController {
 				resultMap.put("success", true);
 				resultMap.put("profiles", list);
 
-				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/profile.xml"));
+				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/Profile.xml"));
 				FileUtils.writeStringToFile(profileFile, content);
 				profileFileList.add(profileFile);
 
@@ -382,7 +382,7 @@ public class HL7V2UploadController {
 			} else {
 				resultMap.put("success", true);
 
-				File vsFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/vs.xml"));
+				File vsFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/ValueSets.xml"));
 				FileUtils.writeStringToFile(vsFile, content);
 				valueSetFileList.add(vsFile);
 				logger.info("Uploaded value set file " + part.getName());
@@ -577,9 +577,9 @@ public class HL7V2UploadController {
 				JSONObject testCaseJson = new JSONObject();
 				testCaseJson.put("name", wrapper.getTestcasename());
 				testCaseJson.put("description", wrapper.getTestcasedescription());
-				testCaseJson.put("profile", "profile.xml");
+				testCaseJson.put("profile", "Profile.xml");
 				testCaseJson.put("constraints", "constraint.xml");
-				testCaseJson.put("vs", "vs.xml");
+				testCaseJson.put("vs", "ValueSets.xml");
 				
 				JSONArray testSteps = new JSONArray();
 				for (UploadedProfileModel upm : wrapper.getTestcases()) {
@@ -591,9 +591,9 @@ public class HL7V2UploadController {
 				}
 				testCaseJson.put("testCases", testSteps);
 				File jsonFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/TestCases.json"));
-				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/profile.xml"));
-				File constraintsFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/constraints.xml"));
-				File vsFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/vs.xml"));
+				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/Profile.xml"));
+				File constraintsFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/Constraints.xml"));
+				File vsFile = new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId + "/ValueSets.xml"));
 				
 				List<File> files = new ArrayList<File>();
 
