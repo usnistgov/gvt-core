@@ -168,7 +168,7 @@ public class HL7V2UploadController {
 				FileUtils.writeStringToFile(valueSetFile, bundleHandler.getValueSetContentFromZipDirectory(directory));
 				valueSetFileList.add(valueSetFile);
 				
-				File constraintFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/constraint.xml"));
+				File constraintFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/Constraints.xml"));
 				FileUtils.writeStringToFile(constraintFile, bundleHandler.getConstraintContentFromZipDirectory(directory));
 				constraintFileList.add(constraintFile);
 				
@@ -237,7 +237,7 @@ public class HL7V2UploadController {
 				FileUtils.writeStringToFile(valueSetFile, bundleHandler.getValueSetContentFromZipDirectory(directory));
 //				valueSetFileListIGAMT.add(valueSetFile);
 				
-				File constraintFile = new File(request.getServletContext().getRealPath("tmp/" + token + "/" + userId + "/constraint.xml"));
+				File constraintFile = new File(request.getServletContext().getRealPath("tmp/" + token + "/" + userId + "/Constraints.xml"));
 				FileUtils.writeStringToFile(constraintFile, bundleHandler.getConstraintContentFromZipDirectory(directory));
 //				constraintFileListIGAMT.add(constraintFile);
 				
@@ -283,7 +283,7 @@ public class HL7V2UploadController {
 			List<UploadedProfileModel> list = packagingHandler.getUploadedProfiles(profileContent);
 			resultMap.put("success", true);
 			resultMap.put("profiles", list);	
-			FileUtils.deleteDirectory(new File(zipDirectoryIGAMT));
+//			FileUtils.deleteDirectory(new File(zipDirectoryIGAMT));
 
 			logger.info("retrieved profile info from IGAMT upload");
 
@@ -421,7 +421,7 @@ public class HL7V2UploadController {
 				resultMap.put("success", true);
 
 				File constraintFile = new File(
-						request.getServletContext().getRealPath("tmp/" + userId + "/constraint.xml"));
+						request.getServletContext().getRealPath("tmp/" + userId + "/Constraints.xml"));
 				FileUtils.writeStringToFile(constraintFile, content);
 				constraintFileList.add(constraintFile);
 				logger.info("Uploaded constraints file " + part.getName());
@@ -597,11 +597,11 @@ public class HL7V2UploadController {
 				
 				List<File> files = new ArrayList<File>();
 
-				if (!constraintFileList.isEmpty()) {
+				if (constraintsFile != null) {
 					packagingHandler.changeConstraintId(constraintsFile);
 					files.add(constraintsFile);
 				}
-				if (!valueSetFileList.isEmpty()) {
+				if (vsFile != null) {
 					packagingHandler.changeVsId(vsFile);
 					files.add(vsFile);
 				}
@@ -616,21 +616,19 @@ public class HL7V2UploadController {
 				FileUtils.writeStringToFile(jsonFile, testCaseJson.toString());
 				files.add(jsonFile);
 				zip = packagingHandler.zip(files,
-				request.getServletContext().getRealPath("tmp/" + userId + "/testcase.zip"));
+				request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/" + userId + "/testcase.zip"));
 //			}
 
 			if (zip != null) {
 				//fix this step no need to zip to unzip just after...
 				String directory2 = bundleHandler.unzip(Files.toByteArray(zip));
 				GVTSaveInstance si = bundleHandler.unbundle(directory2);
-				FileUtils.deleteDirectory(new File(directory2));
-				FileUtils.deleteDirectory(new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId)));
 				ipRepository.save(si.ip);
 				csRepository.save(si.ct);
 				vsRepository.save(si.vs);
 				si.tcg.setUserId(userId);
 				testCaseGroupRepository.saveAndFlush(si.tcg);
-
+ 				FileUtils.deleteDirectory(new File(request.getServletContext().getRealPath("tmp/" + wrapper.getToken() + "/"  + userId)));
 				return new UploadStatus(ResourceUploadResult.SUCCESS, "Test Cases Group has been added");
 			} else {
 				return new UploadStatus(ResourceUploadResult.FAILURE, "Submitted bundle is empty");
