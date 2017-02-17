@@ -578,7 +578,7 @@ public class HL7V2UploadController {
 				testCaseJson.put("name", wrapper.getTestcasename());
 				testCaseJson.put("description", wrapper.getTestcasedescription());
 				testCaseJson.put("profile", "Profile.xml");
-				testCaseJson.put("constraints", "constraint.xml");
+				testCaseJson.put("constraints", "Constraints.xml");
 				testCaseJson.put("vs", "ValueSets.xml");
 				
 				JSONArray testSteps = new JSONArray();
