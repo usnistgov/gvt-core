@@ -41,10 +41,11 @@ public class BundleHandlerImpl implements BundleHandler {
 	@Autowired
 	private ResourceLoader resourceLoader;
 	
+	
 	@Override
-	public String unzip(byte[] bytes) throws Exception {
-		File tmpDir = Files.createTempDir();
-		tmpDir.mkdir();
+	public String unzip(byte[] bytes, String path) throws Exception {
+		File tmpDir = new File(path);
+		tmpDir.mkdirs();
 		if (tmpDir.isDirectory()) {
 			// Extract ZIP
 			ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes));
@@ -71,22 +72,21 @@ public class BundleHandlerImpl implements BundleHandler {
 			return tmpDir.getAbsolutePath();
 
 		} else {
-			throw new Exception("Could not create TMP directory");
+			throw new Exception("Could not create TMP directory at " + tmpDir.getAbsolutePath());
 		}
-	}
+	}	
 	
 	@Override
-	public GVTSaveInstance unbundle(String dir) throws IOException, ProfileParserException{
-		resourceLoader.setDirectory(dir+"/");
+	public GVTSaveInstance createGVTSaveInstance(String dir) throws IOException, ProfileParserException{
 		GVTSaveInstance save = new GVTSaveInstance();
-		Resource res = resourceLoader.getResource("TestCases.json");
-		if(res == null){
+		File testCasesFile = new File(dir+"/TestCases.json");
+		if(!testCasesFile.exists()){
 			throw new IllegalArgumentException("No TestCases.json found");
 		}
 		
 		UserTestCaseGroup gtcg = new UserTestCaseGroup();
 		save.tcg = gtcg;
-		String descriptorContent = FileUtil.getContent(res);
+		String descriptorContent = FileUtils.readFileToString(testCasesFile);
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode testCasesObj = mapper.readTree(descriptorContent);
 		
@@ -97,28 +97,32 @@ public class BundleHandlerImpl implements BundleHandler {
 		 
 		// Profile
 		String profileName = testCasesObj.findValue("profile").asText();
-		Resource profile = resourceLoader.getResource(profileName);
-		if(profile == null){
+		File profileFile = new File(dir+"/"+profileName);
+		if(!profileFile.exists()){
 			throw new IllegalArgumentException("Profile "+profileName+" not found");
 		}
-		IntegrationProfile p = resourceLoader.integrationProfile(FileUtil.getContent(profile));
+		IntegrationProfile p = resourceLoader.integrationProfile(FileUtils.readFileToString(profileFile));
 		save.ip = p;
+		
 		// Constraints
 		String constraintName = testCasesObj.findValue("constraints").asText();
-		Resource constraints = resourceLoader.getResource(constraintName);
-		if(constraints == null){
+		File constraintsFile = new File(dir+"/"+constraintName);
+		if(!constraintsFile.exists()){
 			throw new IllegalArgumentException("Constraints "+constraintName+" not found");
 		}
-		Constraints c = resourceLoader.constraint(FileUtil.getContent(constraints));
+		Constraints c = resourceLoader.constraint(FileUtils.readFileToString(constraintsFile));
 		save.ct = c;
+		
 		// VS
 		String vocabName = testCasesObj.findValue("vs").asText();
-		Resource vs = resourceLoader.getResource(vocabName);
-		if(vs == null){
+		File vsFile = new File(dir+"/"+vocabName);
+		if(!vsFile.exists()){
 			throw new IllegalArgumentException("VocabularyLibrary "+vocabName+" not found");
 		}
-		VocabularyLibrary v = resourceLoader.vocabLibrary(FileUtil.getContent(vs));
+		VocabularyLibrary v = resourceLoader.vocabLibrary(FileUtils.readFileToString(vsFile));
 		save.vs = v;
+		
+		
 		List<UserCFTestInstance> testCases = new ArrayList<>(); 
 		Iterator<JsonNode> testCasesIter = testCasesObj.findValue("testCases").elements();
 		int i = 1;
@@ -163,34 +167,28 @@ public class BundleHandlerImpl implements BundleHandler {
 	
 	
 	public String getProfileContentFromZipDirectory(String dir) throws IOException{
-		resourceLoader.setDirectory(findFileDirectory(dir,"Profile.xml")+"/");
-		Resource profile = resourceLoader.getResource("Profile.xml");
-		return  FileUtil.getContent(profile);
+		return  FileUtils.readFileToString(findFileDirectory(dir,"Profile.xml"));
 	}
 	
 	public String getValueSetContentFromZipDirectory(String dir) throws IOException{
-		resourceLoader.setDirectory(findFileDirectory(dir,"ValueSets.xml")+"/");
-		Resource profile = resourceLoader.getResource("ValueSets.xml");
-		return  FileUtil.getContent(profile);
+		return  FileUtils.readFileToString(findFileDirectory(dir,"ValueSets.xml"));
 	}
 	
 	public String getConstraintContentFromZipDirectory(String dir) throws IOException{
-		resourceLoader.setDirectory(findFileDirectory(dir,"Constraints.xml")+"/");
-		Resource profile = resourceLoader.getResource("Constraints.xml");
-		return  FileUtil.getContent(profile);
+		return  FileUtils.readFileToString(findFileDirectory(dir,"Constraints.xml"));
 	}
 	
-	// finds folder where file is found (first occurence)
-		private String findFileDirectory(String dir, String fileName) {
-			Collection files = FileUtils.listFiles(new File(dir), null, true);
-			for (Iterator iterator = files.iterator(); iterator.hasNext();) {
-				File file = (File) iterator.next();
-				if (file.getName().equals(fileName)) {
-					return file.getParentFile().getAbsolutePath();
-				}
+	// finds file in dir and sub-dir
+	private File findFileDirectory(String dir, String fileName) {
+		Collection<File> files = FileUtils.listFiles(new File(dir), null, true);
+		for (Iterator<File> iterator = files.iterator(); iterator.hasNext();) {
+			File file = (File) iterator.next();
+			if (file.getName().equals(fileName)) {
+				return file;
 			}
-			return null;
 		}
+		return null;
+	}
 	
 	
 	

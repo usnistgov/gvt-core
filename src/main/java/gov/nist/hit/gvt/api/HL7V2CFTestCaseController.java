@@ -28,7 +28,7 @@ import gov.nist.hit.gvt.repository.UserTestCaseGroupRepository;
 import gov.nist.hit.gvt.service.BundleHandler;
 import gov.nist.hit.gvt.service.UserIdService;
 
-@RequestMapping("/gvt")
+
 @Controller
 public class HL7V2CFTestCaseController {
 
@@ -54,13 +54,13 @@ public class HL7V2CFTestCaseController {
 	
 
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/groups", method = RequestMethod.GET)
+	@RequestMapping(value = "/cf/groups", method = RequestMethod.GET)
 	@ResponseBody
 	public SessionTestCases testcases(Principal p) throws NoUserFoundException {
 		Long userId = userIdService.getCurrentUserId(p);
 		
 		if(userId == null)
-			throw new NoUserFoundException();
+			throw new NoUserFoundException("User could not be found");
 
 		SessionTestCases stc = new SessionTestCases();
   		stc.setPreloaded(testCaseGroupRepository.findByPreloaded(true));
@@ -68,59 +68,5 @@ public class HL7V2CFTestCaseController {
   		return stc;
 	}
 	
-	
-//	@PreAuthorize("hasRole('tester')")
-//	@RequestMapping(value = "/bundle/upload", method = RequestMethod.POST, consumes = { "multipart/form-data" })
-//	@ResponseBody
-//	public UploadStatus bundle(@RequestPart("file") MultipartFile file,Principal p) {
-//		try {
-//			if(!file.isEmpty()){
-//				Long userId = userIdService.getCurrentUserId(p);
-//				if(userId == null)
-//					throw new NoUserFoundException();
-//				
-//				String directory = bundleHandler.unzip(file.getBytes());
-//				System.out.println("UNBUNDLING");
-//				GVTSaveInstance si = bundleHandler.unbundle(directory);
-//				FileUtils.deleteDirectory(new File(directory));
-//				ipRepository.save(si.ip);
-//				csRepository.save(si.ct);
-//				vsRepository.save(si.vs);
-//				si.tcg.setUserId(userId);
-//				System.out.println("SAVING");
-//				testCaseGroupRepository.saveAndFlush(si.tcg);
-//				System.out.println("SAVED");
-//				return new UploadStatus(ResourceUploadResult.SUCCESS,"Test Cases Group has been added");
-//			}
-//			else {
-//				return new UploadStatus(ResourceUploadResult.FAILURE,"Submitted bundle is empty");
-//			}
-//		}
-//		catch(IOException e){
-//			return new UploadStatus(ResourceUploadResult.FAILURE,"IO Error could not read bundle");
-//		} catch (NoUserFoundException e) {
-//			return new UploadStatus(ResourceUploadResult.FAILURE,"No User Found");
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			return new UploadStatus(ResourceUploadResult.FAILURE,"Could not read bundle, "
-//					+ "please check that format is correct");
-//		}
-//	}
-	
-//	//@PreAuthorize("hasRole('admin')")
-//	@PreAuthorize("hasRole('tester')")
-//	@RequestMapping(value = "/preload/{id}", method = RequestMethod.GET)
-//	@ResponseBody
-//	public UploadStatus preload(@PathVariable Long id,Principal principal) throws NoUserFoundException {
-//		UserTestCaseGroup find = testCaseGroupRepository.findOne(id);
-//		if(find != null){
-//			find.setPreloaded(true);
-//			testCaseGroupRepository.save(find);
-//			return new UploadStatus(ResourceUploadResult.SUCCESS,"TestCase Group "+id+" is now preloaded");
-//		}
-//		else {
-//			return new UploadStatus(ResourceUploadResult.FAILURE,"TestCase Group "+id+" not found");
-//		}
-//	}
-	
+
 }
