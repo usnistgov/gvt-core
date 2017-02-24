@@ -121,7 +121,7 @@ public class HL7V2UploadController {
 	 * @throws MessageUploadException
 	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/uploadzip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@RequestMapping(value = "/uploadZip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
 	public Map<String, Object> uploadZip(ServletRequest request, @RequestPart("file") MultipartFile part, Principal p)
 			throws MessageUploadException {
@@ -192,7 +192,7 @@ public class HL7V2UploadController {
 	 * @throws MessageUploadException
 	 */	
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/uploadprofile", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@RequestMapping(value = "/uploadProfile", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
 	public Map<String, Object> uploadProfile(ServletRequest request, @RequestPart("file") MultipartFile part,@RequestParam("token") String token, Principal p) throws MessageUploadException {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
@@ -251,7 +251,7 @@ public class HL7V2UploadController {
 	 * @throws MessageUploadException
 	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/uploadvs", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@RequestMapping(value = "/uploadVS", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
 	public Map<String, Object> uploadVS(ServletRequest request, @RequestPart("file") MultipartFile part,@RequestParam("token") String token, Principal p) throws MessageUploadException {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
@@ -307,7 +307,7 @@ public class HL7V2UploadController {
 	 * @throws MessageUploadException
 	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/uploadcontraints", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@RequestMapping(value = "/uploadContraints", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
 	public Map<String, Object> uploadContraints(ServletRequest request, @RequestPart("file") MultipartFile part,@RequestParam("token") String token,Principal p) throws MessageUploadException {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
@@ -362,7 +362,7 @@ public class HL7V2UploadController {
 	 * @throws MessageUploadException
 	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/remoteuploadzip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@RequestMapping(value = "/remoteUploadZip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
 	public Map<String, Object> remoteUploadZip(ServletRequest request, @RequestPart("file") MultipartFile part, Principal p)
 			throws MessageUploadException {
@@ -427,7 +427,7 @@ public class HL7V2UploadController {
 	 * @throws MessageUploadException
 	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/remoteuploadedprofiles", method = RequestMethod.POST)
+	@RequestMapping(value = "/remoteUploadedProfiles", method = RequestMethod.POST)
 	@ResponseBody
 	public Map<String, Object> remoteUploadedProfiles(ServletRequest request,@RequestBody Token token, Principal p)
 			throws MessageUploadException {
@@ -482,7 +482,7 @@ public class HL7V2UploadController {
 	 * @return UploadStatus
 	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/addprofiles", method = RequestMethod.POST)
+	@RequestMapping(value = "/addProfiles", method = RequestMethod.POST)
 	@ResponseBody
 	public UploadStatus addProfiles(ServletRequest request, @RequestBody TestCaseWrapper wrapper, Principal p) {
 		try {
@@ -558,7 +558,7 @@ public class HL7V2UploadController {
 	 * @return True/False as success indicator
 	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/clearfiles", method = RequestMethod.POST)
+	@RequestMapping(value = "/clearFiles", method = RequestMethod.POST)
 	@ResponseBody
 	public boolean clearFiles(ServletRequest request, @RequestBody Token token, Principal p) {
 
@@ -585,7 +585,7 @@ public class HL7V2UploadController {
 	 * @throws NoUserFoundException
 	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/deleteprofile", method = RequestMethod.POST)
+	@RequestMapping(value = "/deleteProfile", method = RequestMethod.POST)
 	@ResponseBody
 	@Transactional(value = "transactionManager")
 	public boolean deleteProfile(ServletRequest request, @RequestBody LongResult lr, Principal p) throws NoUserFoundException{
