@@ -112,73 +112,6 @@ public class HL7V2UploadController {
 	private FileValidationHandler fileValidationHandler;
 
 
-	/**
-	 * Uploads zip file from tool and stores it in a temporary directory
-	 * @param request Client request
-	 * @param part Zip file
-	 * @param p Principal
-	 * @return a token and a list of profiles or some errors
-	 * @throws MessageUploadException
-	 */
-	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/uploadZip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
-	@ResponseBody
-	public Map<String, Object> uploadZip(ServletRequest request, @RequestPart("file") MultipartFile part, Principal p)
-			throws MessageUploadException {
-		Map<String, Object> resultMap = new HashMap<String, Object>();
-		try {
-			if (!part.getContentType().equalsIgnoreCase("application/zip"))
-				throw new MessageUploadException("Unsupported content type. Supported content types are: '.zip' ");
-
-			Long userId = userIdService.getCurrentUserId(p);
-			if (userId == null)
-				throw new NoUserFoundException("User could not be found");
-
-
-			String token =  UUID.randomUUID().toString();
-			String directory = bundleHandler.unzip(part.getBytes(),tmpDir+ "/" + userId + "/" + token);
-			Map<String, List<XMLError>> errorMap = fileValidationHandler.unbundleAndValidate(directory);
-			String profileContent = bundleHandler.getProfileContentFromZipDirectory(directory);
-			
-
-			if (errorMap.get("profileErrors").size() > 0 || errorMap.get("constraintsErrors").size() > 0
-					|| errorMap.get("vsErrors").size() > 0) {
-				resultMap.put("success", false);
-				resultMap.put("profileErrors", errorMap.get("profileErrors"));
-				resultMap.put("constraintsErrors", errorMap.get("constraintsErrors"));
-				resultMap.put("vsErrors", errorMap.get("vsErrors"));
-				FileUtils.deleteDirectory(new File(directory));
-				logger.info("Uploaded profile file with errors " + part.getName());
-			} else {
-				List<UploadedProfileModel> list = packagingHandler.getUploadedProfiles(profileContent);
-				resultMap.put("success", true);
-				resultMap.put("token", token);
-				resultMap.put("profiles", list);
-
-
-				logger.info("Uploaded valid zip File file " + part.getName());
-			}
-
-			
-		} catch (NoUserFoundException e) {
-			resultMap.put("success", false);
-			resultMap.put("message", "An error occured. The tool could not upload the zip file sent");
-			resultMap.put("debugError", ExceptionUtils.getMessage(e));
-			return resultMap;
-		} catch (MessageUploadException e) {
-			resultMap.put("success", false);
-			resultMap.put("message", "An error occured. The tool could not upload the zip file sent");
-			resultMap.put("debugError", ExceptionUtils.getMessage(e));
-			return resultMap;
-		} catch (Exception e) {
-			resultMap.put("success", false);
-			resultMap.put("message", "An error occured");
-			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
-			return resultMap;
-		}
-		return resultMap;
-	}
-	
 	
 	
 	
@@ -362,7 +295,7 @@ public class HL7V2UploadController {
 	 * @throws MessageUploadException
 	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/remoteUploadZip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@RequestMapping(value = "/uploadZip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
 	public Map<String, Object> remoteUploadZip(ServletRequest request, @RequestPart("file") MultipartFile part, Principal p)
 			throws MessageUploadException {
@@ -427,7 +360,7 @@ public class HL7V2UploadController {
 	 * @throws MessageUploadException
 	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/remoteUploadedProfiles", method = RequestMethod.POST)
+	@RequestMapping(value = "uploadedProfiles", method = RequestMethod.POST)
 	@ResponseBody
 	public Map<String, Object> remoteUploadedProfiles(ServletRequest request,@RequestBody Token token, Principal p)
 			throws MessageUploadException {
