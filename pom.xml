@@ -40,8 +40,8 @@
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>2.5.1</version>
 					<configuration>
-						<source>1.7</source>
-						<target>1.7</target>
+						<source>1.8</source>
+						<target>1.8</target>
 					</configuration>
 				</plugin>
 
@@ -83,7 +83,7 @@
 	</distributionManagement>
 
 	<properties>
-		<hitcorehl7v2.version>1.0.12-SNAPSHOT</hitcorehl7v2.version>
+		<hitcorehl7v2.version>1.0.15-SNAPSHOT</hitcorehl7v2.version>
 		<resourcesValidation.version>0.0.3</resourcesValidation.version>
 	</properties>
 </project>

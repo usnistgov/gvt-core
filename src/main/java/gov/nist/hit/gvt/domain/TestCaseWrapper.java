@@ -8,7 +8,7 @@ public class TestCaseWrapper {
 	private List<UploadedProfileModel> testcases;
 	private String testcasename;
 	private String testcasedescription;
-	
+	private String token;
 	
 	
 	public TestCaseWrapper() {
@@ -24,6 +24,16 @@ public class TestCaseWrapper {
 	}
 	
 	
+	
+	public TestCaseWrapper(List<UploadedProfileModel> testcases, String testcasename, String testcasedescription, String token) {
+		super();
+		this.testcases = testcases;
+		this.testcasename = testcasename;
+		this.testcasedescription = testcasedescription;
+		this.token = token;
+	}
+
+
 	public List<UploadedProfileModel> getTestcases() {
 		return testcases;
 	}
@@ -41,6 +51,12 @@ public class TestCaseWrapper {
 	}
 	public void setTestcasedescription(String testcasedescription) {
 		this.testcasedescription = testcasedescription;
+	}
+	public String getToken() {
+		return token;
+	}
+	public void setToken(String token) {
+		this.token = token;
 	}
 	
 	

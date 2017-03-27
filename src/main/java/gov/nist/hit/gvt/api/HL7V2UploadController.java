@@ -18,12 +18,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.servlet.ServletRequest;
 
@@ -46,8 +45,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.google.common.io.Files;
-
 import gov.nist.healthcare.resources.domain.XMLError;
 import gov.nist.hit.core.domain.ResourceUploadResult;
 import gov.nist.hit.core.domain.UserCFTestInstance;
@@ -61,10 +58,11 @@ import gov.nist.hit.core.service.exception.MessageUploadException;
 import gov.nist.hit.gvt.domain.GVTSaveInstance;
 import gov.nist.hit.gvt.domain.LongResult;
 import gov.nist.hit.gvt.domain.TestCaseWrapper;
+import gov.nist.hit.gvt.domain.Token;
 import gov.nist.hit.gvt.domain.UploadStatus;
 import gov.nist.hit.gvt.domain.UploadedProfileModel;
 import gov.nist.hit.gvt.exception.NoUserFoundException;
-import gov.nist.hit.gvt.repository.UserCFTestInstanceRepository;
+import gov.nist.hit.gvt.exception.NotValidToken;
 import gov.nist.hit.gvt.repository.UserTestCaseGroupRepository;
 import gov.nist.hit.gvt.service.BundleHandler;
 import gov.nist.hit.gvt.service.FileValidationHandler;
@@ -76,17 +74,18 @@ import io.swagger.annotations.Api;
  * @author Nicolas Crouzier (NIST)
  * 
  */
-@RequestMapping("/gvt")
+
+@RequestMapping("/upload")
 @Api(hidden = true)
 @Controller
 public class HL7V2UploadController {
 
 	static final Logger logger = LoggerFactory.getLogger(HL7V2UploadController.class);
 
+	private final String tmpDir = new File(System.getProperty("java.io.tmpdir")).getAbsolutePath() +"/gvt";
+	
 	ProfileParser parser = new HL7V2ProfileParserImpl();
 
-	@Autowired
-	private UserCFTestInstanceRepository userCFTestInstanceRepository;
 	
 	@Autowired
 	private UserTestCaseGroupRepository testCaseGroupRepository;
@@ -112,82 +111,23 @@ public class HL7V2UploadController {
 	@Autowired
 	private FileValidationHandler fileValidationHandler;
 
-	private final List<File> profileFileList = new ArrayList<File>();
-	private final List<File> valueSetFileList = new ArrayList<File>();
-	private final List<File> constraintFileList = new ArrayList<File>();
 
-	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/upload/uploadzip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
-	@ResponseBody
-	public Map<String, Object> uploadzip(ServletRequest request, @RequestPart("file") MultipartFile part, Principal p)
-			throws MessageUploadException {
-		Map<String, Object> resultMap = new HashMap<String, Object>();
-		try {
-			if (!part.getContentType().equalsIgnoreCase("application/zip"))
-				throw new MessageUploadException("Unsupported content type. Supported content types are: '.zip' ");
-
-			Long userId = userIdService.getCurrentUserId(p);
-			if (userId == null)
-				throw new NoUserFoundException();
-
-			InputStream in = part.getInputStream();
-			String content = IOUtils.toString(in);
-
-			String directory = bundleHandler.unzip(part.getBytes());
-			Map<String, List<XMLError>> errorMap = fileValidationHandler.unbundleAndValidate(directory);
-			String profileContent = bundleHandler.getProfileContentFromZipDirectory(directory);
-			
-
-			if (errorMap.get("profileErrors").size() > 0 || errorMap.get("constraintsErrors").size() > 0
-					|| errorMap.get("vsErrors").size() > 0) {
-				resultMap.put("success", false);
-				resultMap.put("profileErrors", errorMap.get("profileErrors"));
-				resultMap.put("constraintsErrors", errorMap.get("constraintsErrors"));
-				resultMap.put("vsErrors", errorMap.get("vsErrors"));
-				FileUtils.deleteDirectory(new File(directory));
-				logger.info("Uploaded profile file with errors " + part.getName());
-			} else {
-				List<UploadedProfileModel> list = packagingHandler.getUploadedProfiles(profileContent);
-				resultMap.put("success", true);
-				resultMap.put("profiles", list);
-				
-				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/profile.xml"));
-				FileUtils.writeStringToFile(profileFile, bundleHandler.getProfileContentFromZipDirectory(directory));
-				profileFileList.add(profileFile);
-				
-				File valueSetFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/vs.xml"));
-				FileUtils.writeStringToFile(valueSetFile, bundleHandler.getValueSetContentFromZipDirectory(directory));
-				valueSetFileList.add(valueSetFile);
-				
-				File constraintFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/constraint.xml"));
-				FileUtils.writeStringToFile(constraintFile, bundleHandler.getConstraintContentFromZipDirectory(directory));
-				constraintFileList.add(constraintFile);
-				
-				FileUtils.deleteDirectory(new File(directory));
-
-				logger.info("Uploaded valid zip File file " + part.getName());
-			}
-
-			
-		} catch (NoUserFoundException e) {
-			resultMap.put("success", false);
-			resultMap.put("message", "User not found error");
-			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
-			return resultMap;
-		} catch (Exception e) {
-			resultMap.put("success", false);
-			resultMap.put("message", "An error occured");
-			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
-			return resultMap;
-		}
-		return resultMap;
-	}
 	
+	
+	
+	/**
+	 * Upload a single XML profile file and may returns errors
+	 * @param request Client request
+	 * @param part Profile XML file
+	 * @param token Token used for saving file
+	 * @param p Principal
+	 * @return A list of profiles or a list of errors
+	 * @throws MessageUploadException
+	 */	
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/upload/uploadprofile", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@RequestMapping(value = "/uploadProfile", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
-	public Map<String, Object> uploadprofile(ServletRequest request, @RequestPart("file") MultipartFile part,
-			Principal p) throws MessageUploadException {
+	public Map<String, Object> uploadProfile(ServletRequest request, @RequestPart("file") MultipartFile part,@RequestParam("token") String token, Principal p) throws MessageUploadException {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
 		try {
 			if (!part.getContentType().equalsIgnoreCase("text/xml"))
@@ -195,7 +135,7 @@ public class HL7V2UploadController {
 
 			Long userId = userIdService.getCurrentUserId(p);
 			if (userId == null)
-				throw new NoUserFoundException();
+				throw new NoUserFoundException("User could not be found");
 
 			InputStream in = part.getInputStream();
 			String content = IOUtils.toString(in);
@@ -210,38 +150,43 @@ public class HL7V2UploadController {
 				resultMap.put("success", true);
 				resultMap.put("profiles", list);
 
-				File profileFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/profile.xml"));
+				File profileFile = new File(tmpDir+ "/" + userId  + "/" + token + "/Profile.xml");
 				FileUtils.writeStringToFile(profileFile, content);
-				profileFileList.add(profileFile);
-
 				logger.info("Uploaded valid profile file " + part.getName());
 			}
 
 			return resultMap;
-		} catch (RuntimeException e) {
-			e.printStackTrace();
-			throw new MessageUploadException(e);
-		} catch (URISyntaxException e) {
-			e.printStackTrace();
-			throw new MessageUploadException(e);
-		} catch (IOException e) {
-			e.printStackTrace();
-			throw new MessageUploadException(e);
 		} catch (NoUserFoundException e) {
 			resultMap.put("success", false);
-			resultMap.put("message", "No User Found");
+			resultMap.put("message", "An error occured. The tool could not upload the profile file sent");
+			resultMap.put("debugError", ExceptionUtils.getMessage(e));
+			return resultMap;
+		} catch (MessageUploadException e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the profile file sent");
+			resultMap.put("debugError", ExceptionUtils.getMessage(e));
 			return resultMap;
 		} catch (Exception e) {
-			e.printStackTrace();
-			throw new MessageUploadException(e);
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the profile file sent");
+			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
+			return resultMap;
 		}
 	}
 
+	/**
+	 * Upload a single XML value set file and may returns errors
+	 * @param request Client request
+	 * @param part Value Set XML file
+	 * @param token Token used for saving file
+	 * @param p Principal
+	 * @return  May return a list of errors
+	 * @throws MessageUploadException
+	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/upload/uploadvs", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@RequestMapping(value = "/uploadVS", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
-	public Map<String, Object> uploadvs(ServletRequest request, @RequestPart("file") MultipartFile part, Principal p)
-			throws MessageUploadException {
+	public Map<String, Object> uploadVS(ServletRequest request, @RequestPart("file") MultipartFile part,@RequestParam("token") String token, Principal p) throws MessageUploadException {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
 		try {
 			if (!part.getContentType().equalsIgnoreCase("text/xml"))
@@ -249,7 +194,7 @@ public class HL7V2UploadController {
 
 			Long userId = userIdService.getCurrentUserId(p);
 			if (userId == null)
-				throw new NoUserFoundException();
+				throw new NoUserFoundException("User could not be found");
 
 			InputStream in = part.getInputStream();
 			String content = IOUtils.toString(in);
@@ -262,24 +207,42 @@ public class HL7V2UploadController {
 			} else {
 				resultMap.put("success", true);
 
-				File vsFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/vs.xml"));
+				File vsFile = new File(tmpDir+ "/" + userId  + "/" + token + "/ValueSets.xml");
 				FileUtils.writeStringToFile(vsFile, content);
-				valueSetFileList.add(vsFile);
 				logger.info("Uploaded value set file " + part.getName());
 			}
 			return resultMap;
-		} catch (RuntimeException e) {
-			throw new MessageUploadException(e);
+		} catch (NoUserFoundException e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the valueset file sent");
+			resultMap.put("debugError", ExceptionUtils.getMessage(e));
+			return resultMap;
+		} catch (MessageUploadException e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the valueset file sent");
+			resultMap.put("debugError", ExceptionUtils.getMessage(e));
+			return resultMap;
 		} catch (Exception e) {
-			throw new MessageUploadException(e);
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the valueset file sent");
+			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
+			return resultMap;
 		}
 	}
 
+	/**
+	 * Upload a single XML constraints file and may returns errors
+	 * @param request Client request
+	 * @param part Constraints XML file
+	 * @param token Token used for saving file
+	 * @param p Principal
+	 * @return  May return a list of errors
+	 * @throws MessageUploadException
+	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/upload/uploadcontraints", method = RequestMethod.POST, consumes = { "multipart/form-data" })
+	@RequestMapping(value = "/uploadContraints", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
-	public Map<String, Object> uploadcontraints(ServletRequest request, @RequestPart("file") MultipartFile part,
-			Principal p) throws MessageUploadException {
+	public Map<String, Object> uploadContraints(ServletRequest request, @RequestPart("file") MultipartFile part,@RequestParam("token") String token,Principal p) throws MessageUploadException {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
 		try {
 			if (!part.getContentType().equalsIgnoreCase("text/xml"))
@@ -287,7 +250,7 @@ public class HL7V2UploadController {
 
 			Long userId = userIdService.getCurrentUserId(p);
 			if (userId == null)
-				throw new NoUserFoundException();
+				throw new NoUserFoundException("User could not be found");
 
 			InputStream in = part.getInputStream();
 			String content = IOUtils.toString(in);
@@ -300,136 +263,269 @@ public class HL7V2UploadController {
 			} else {
 				resultMap.put("success", true);
 
-				File constraintFile = new File(
-						request.getServletContext().getRealPath("tmp/" + userId + "/constraint.xml"));
+				File constraintFile = new File(tmpDir+ "/" + userId + "/" + token + "/Constraints.xml");
 				FileUtils.writeStringToFile(constraintFile, content);
-				constraintFileList.add(constraintFile);
 				logger.info("Uploaded constraints file " + part.getName());
 			}
 			return resultMap;
-		} catch (RuntimeException e) {
-			throw new MessageUploadException(e);
+		} catch (NoUserFoundException e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the constraints file sent");
+			resultMap.put("debugError", ExceptionUtils.getMessage(e));
+			return resultMap;
+		} catch (MessageUploadException e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the constraints file sent");
+			resultMap.put("debugError", ExceptionUtils.getMessage(e));
+			return resultMap;
 		} catch (Exception e) {
-			throw new MessageUploadException(e);
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the constraints file sent");
+			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
+			return resultMap;
 		}
 	}
 	
-	
+	/**
+	 * Uploads zip file from remote and stores it in a temporary directory
+	 * @param request Client request
+	 * @param part Zip file
+	 * @param p Principal
+	 * @return a token or some errors
+	 * @throws MessageUploadException
+	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/addtestcases", method = RequestMethod.POST)
+	@RequestMapping(value = "/uploadZip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
-	public UploadStatus addtestcases(ServletRequest request, @RequestBody TestCaseWrapper wrapper, Principal p) {
+	public Map<String, Object> remoteUploadZip(ServletRequest request, @RequestPart("file") MultipartFile part, Principal p)
+			throws MessageUploadException {
+		Map<String, Object> resultMap = new HashMap<String, Object>();
 		try {
+			if (!part.getContentType().equalsIgnoreCase("application/zip"))
+				throw new MessageUploadException("Unsupported content type. Supported content types are: '.zip' ");
+
 			Long userId = userIdService.getCurrentUserId(p);
 			if (userId == null)
-				throw new NoUserFoundException();
-				File zip;
-				
-				// dealing with individual files
-				JSONObject testCaseJson = new JSONObject();
-				testCaseJson.put("name", wrapper.getTestcasename());
-				testCaseJson.put("description", wrapper.getTestcasedescription());
-				testCaseJson.put("profile", profileFileList.get(0).getName());
-				if (!constraintFileList.isEmpty()) {
-					testCaseJson.put("constraints", constraintFileList.get(0).getName());
-				}
-				if (!valueSetFileList.isEmpty()) {
-					testCaseJson.put("vs", valueSetFileList.get(0).getName());
-				}
-				JSONArray testSteps = new JSONArray();
-				for (UploadedProfileModel upm : wrapper.getTestcases()) {
-					JSONObject ts = new JSONObject();
-					ts.put("name", upm.getName());
-					ts.put("messageId", upm.getId());
-					ts.put("description", upm.getDescription());
-					testSteps.put(ts);
-				}
-				testCaseJson.put("testCases", testSteps);
-				File jsonFile = new File(request.getServletContext().getRealPath("tmp/" + userId + "/TestCases.json"));
+				throw new NoUserFoundException("User could not be found");
 
-				List<File> files = new ArrayList<File>();
 
-				if (!constraintFileList.isEmpty()) {
-					packagingHandler.changeConstraintId(constraintFileList.get(0));
-					files.add(constraintFileList.get(0));
-				}
-				if (!valueSetFileList.isEmpty()) {
-					packagingHandler.changeVsId(valueSetFileList.get(0));
-					files.add(valueSetFileList.get(0));
-				}
 
-				InputStream targetStream = new FileInputStream(profileFileList.get(0));
-				String content = IOUtils.toString(targetStream);
-				String cleanedContent = packagingHandler.removeUnusedAndDuplicateMessages(content, wrapper.getTestcases());
-				FileUtils.writeStringToFile(profileFileList.get(0), cleanedContent);
-				packagingHandler.changeProfileId(profileFileList.get(0));
-				files.add(profileFileList.get(0));
+			String token =  UUID.randomUUID().toString();
+			String directory = bundleHandler.unzip(part.getBytes(),tmpDir+ "/" + userId + "/" + token);
+			Map<String, List<XMLError>> errorMap = fileValidationHandler.unbundleAndValidate(directory);
+			
 
-				FileUtils.writeStringToFile(jsonFile, testCaseJson.toString());
-				files.add(jsonFile);
-				zip = packagingHandler.zip(files,
-				request.getServletContext().getRealPath("tmp/" + userId + "/testcase.zip"));
-//			}
-
-			if (zip != null) {
-
-				String directory2 = bundleHandler.unzip(Files.toByteArray(zip));
-				GVTSaveInstance si = bundleHandler.unbundle(directory2);
-				FileUtils.deleteDirectory(new File(directory2));
-				ipRepository.save(si.ip);
-				csRepository.save(si.ct);
-				vsRepository.save(si.vs);
-				si.tcg.setUserId(userId);
-				testCaseGroupRepository.saveAndFlush(si.tcg);
-
-				return new UploadStatus(ResourceUploadResult.SUCCESS, "Test Cases Group has been added");
+			if (errorMap.get("profileErrors").size() > 0 || errorMap.get("constraintsErrors").size() > 0
+					|| errorMap.get("vsErrors").size() > 0) {
+				resultMap.put("success", false);
+				resultMap.put("profileErrors", errorMap.get("profileErrors"));
+				resultMap.put("constraintsErrors", errorMap.get("constraintsErrors"));
+				resultMap.put("vsErrors", errorMap.get("vsErrors"));
+				FileUtils.deleteDirectory(new File(directory));
+				logger.info("Uploaded profile file with errors " + part.getName());
 			} else {
-				return new UploadStatus(ResourceUploadResult.FAILURE, "Submitted bundle is empty");
+				resultMap.put("success", true);
+			    resultMap.put("token", token);
+				
+				logger.info("Uploaded valid zip File file " + part.getName());
 			}
-		} catch (IOException e) {
-			return new UploadStatus(ResourceUploadResult.FAILURE, "IO Error could not read bundle");
+
+			
 		} catch (NoUserFoundException e) {
-			return new UploadStatus(ResourceUploadResult.FAILURE, "No User Found");
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the zip file sent");
+			resultMap.put("debugError", ExceptionUtils.getMessage(e));
+			return resultMap;
+		} catch (MessageUploadException e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the zip file sent");
+			resultMap.put("debugError", ExceptionUtils.getMessage(e));
+			return resultMap;
 		} catch (Exception e) {
-			e.printStackTrace();
-			return new UploadStatus(ResourceUploadResult.FAILURE,
-					"Could not read bundle, " + "please check that format is correct");
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not upload the zip file sent");
+			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
+			return resultMap;
+		}
+		return resultMap;
+	}
+	
+	
+	/**
+	 * Retrieves a list of profiles from previously uploaded files 
+	 * @param request Client request
+	 * @param token token from uploaded files
+	 * @param p Principal
+	 * @return A list of profiles
+	 * @throws MessageUploadException
+	 */
+	@PreAuthorize("hasRole('tester')")
+	@RequestMapping(value = "uploadedProfiles", method = RequestMethod.POST)
+	@ResponseBody
+	public Map<String, Object> remoteUploadedProfiles(ServletRequest request,@RequestBody Token token, Principal p)
+			throws MessageUploadException {
+		Map<String, Object> resultMap = new HashMap<String, Object>();
+		try {
+
+			Long userId = userIdService.getCurrentUserId(p);
+			if (userId == null)
+				throw new NoUserFoundException("User could not be found");
+
+			String directory = tmpDir+ "/" + userId + "/" + token.getToken();
+			if (!new File(directory).exists())
+				throw new NotValidToken("The provided token is not valid for this account.");
+			
+			
+			String profileContent = bundleHandler.getProfileContentFromZipDirectory(directory);
+			
+			if (profileContent == null)
+				throw new MessageUploadException("Could not retrieve the profile list");
+
+			List<UploadedProfileModel> list = packagingHandler.getUploadedProfiles(profileContent);
+			resultMap.put("success", true);
+			resultMap.put("profiles", list);	
+
+			logger.info("retrieved profile info from remote upload");
+
+			
+		} catch (NoUserFoundException e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not retrieve the uploaded profiles");
+			resultMap.put("debugError", ExceptionUtils.getMessage(e));
+			return resultMap;
+		} catch (NotValidToken e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not retrieve the uploaded profiles");
+			resultMap.put("debugError", ExceptionUtils.getMessage(e));
+			return resultMap;
+		} catch (Exception e) {
+			resultMap.put("success", false);
+			resultMap.put("message", "An error occured. The tool could not retrieve the uploaded profiles");
+			resultMap.put("debugError", ExceptionUtils.getStackTrace(e));
+			return resultMap;
+		}
+		return resultMap;
+	}
+	
+	/**
+	 * Add selected profiles to the database
+	 * @param request Client request
+	 * @param wrapper Selected profile information
+	 * @param p Principal
+	 * @return UploadStatus
+	 */
+	@PreAuthorize("hasRole('tester')")
+	@RequestMapping(value = "/addProfiles", method = RequestMethod.POST)
+	@ResponseBody
+	public UploadStatus addProfiles(ServletRequest request, @RequestBody TestCaseWrapper wrapper, Principal p) {
+		try {
+			Long userId = userIdService.getCurrentUserId(p);
+			if (userId == null)
+				throw new NoUserFoundException("User could not be found");
+				
+			// Create needed files
+			JSONObject testCaseJson = new JSONObject();
+			testCaseJson.put("name", wrapper.getTestcasename());
+			testCaseJson.put("description", wrapper.getTestcasedescription());
+			testCaseJson.put("profile", "Profile.xml");
+			testCaseJson.put("constraints", "Constraints.xml");
+			testCaseJson.put("vs", "ValueSets.xml");
+							
+			JSONArray testSteps = new JSONArray();
+			for (UploadedProfileModel upm : wrapper.getTestcases()) {
+				JSONObject ts = new JSONObject();
+				ts.put("name", upm.getName());
+				ts.put("messageId", upm.getId());
+				ts.put("description", upm.getDescription());
+				testSteps.put(ts);
+			}
+			testCaseJson.put("testCases", testSteps);
+			
+			File jsonFile = new File(tmpDir+ "/" + userId + "/"  + wrapper.getToken() + "/TestCases.json");
+			File profileFile = new File(tmpDir+ "/" + userId + "/"  + wrapper.getToken() + "/Profile.xml");
+			File constraintsFile = new File(tmpDir+ "/" + userId + "/"  + wrapper.getToken() + "/Constraints.xml");
+			File vsFile = new File(tmpDir+ "/" + userId + "/"  + wrapper.getToken() + "/ValueSets.xml");
+			
+			if (constraintsFile != null) {
+				packagingHandler.changeConstraintId(constraintsFile);
+			}
+			if (vsFile != null) {
+				packagingHandler.changeVsId(vsFile);
+			}				
+
+			InputStream targetStream = new FileInputStream(profileFile);
+			String content = IOUtils.toString(targetStream);
+			String cleanedContent = packagingHandler.removeUnusedAndDuplicateMessages(content, wrapper.getTestcases());
+			FileUtils.writeStringToFile(profileFile, cleanedContent);
+			packagingHandler.changeProfileId(profileFile);
+
+			FileUtils.writeStringToFile(jsonFile, testCaseJson.toString());
+
+			// Use files to save to database
+			GVTSaveInstance si = bundleHandler.createGVTSaveInstance(tmpDir+ "/" + userId + "/"  + wrapper.getToken());
+			ipRepository.save(si.ip);
+			csRepository.save(si.ct);
+			vsRepository.save(si.vs);
+			si.tcg.setUserId(userId);
+			testCaseGroupRepository.saveAndFlush(si.tcg);
+			FileUtils.deleteDirectory(new File(tmpDir+ "/" + userId + "/"  + wrapper.getToken()));
+			return new UploadStatus(ResourceUploadResult.SUCCESS, "Test Cases Group has been added");
+
+		} catch (IOException e) {
+			return new UploadStatus(ResourceUploadResult.FAILURE, "IO Error could not read files", ExceptionUtils.getStackTrace(e));
+		} catch (NoUserFoundException e) {
+			return new UploadStatus(ResourceUploadResult.FAILURE, "User could not be found", ExceptionUtils.getStackTrace(e));
+		} catch (Exception e) {
+			return new UploadStatus(ResourceUploadResult.FAILURE,  "An error occured while adding profiles", ExceptionUtils.getStackTrace(e));
 		}
 
 	}
 
+	
+	
+	/**
+	 * Clear files in tmp directory
+	 * @param request Client request
+	 * @param token files' token
+	 * @param p Principal
+	 * @return True/False as success indicator
+	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/cleartestcases", method = RequestMethod.POST)
+	@RequestMapping(value = "/clearFiles", method = RequestMethod.POST)
 	@ResponseBody
-	public boolean cleartestcases(ServletRequest request, Principal p) {
+	public boolean clearFiles(ServletRequest request, @RequestBody Token token, Principal p) {
 
 		try {
 			Long userId = userIdService.getCurrentUserId(p);
 			if (userId == null)
-				throw new NoUserFoundException();
-			FileUtils.deleteDirectory(new File(request.getServletContext().getRealPath("tmp/" + userId)));
-			profileFileList.clear();
-			valueSetFileList.clear();
-			constraintFileList.clear();
-	
+				throw new NoUserFoundException("User could not be found");
+			
+			FileUtils.deleteDirectory(new File(tmpDir+ "/" + userId + "/"  + token.getToken()));
 			return true;
-		} catch (NoUserFoundException e) {
-			return false;
-		} catch (IOException e) {
+		} catch (NoUserFoundException | IOException e) {
 			return false;
 		}
-
 	}
 	
+	
+	
+	/**
+	 * Delete a profile from the database
+	 * @param request Client request
+	 * @param lr Profile id
+	 * @param p Principal
+	 * @return True/False as success indicator
+	 * @throws NoUserFoundException
+	 */
 	@PreAuthorize("hasRole('tester')")
-	@RequestMapping(value = "/deletetestcase", method = RequestMethod.POST)
+	@RequestMapping(value = "/deleteProfile", method = RequestMethod.POST)
 	@ResponseBody
 	@Transactional(value = "transactionManager")
-	public boolean deletetestcase(ServletRequest request, @RequestBody LongResult lr, Principal p) throws NoUserFoundException{
+	public boolean deleteProfile(ServletRequest request, @RequestBody LongResult lr, Principal p) throws NoUserFoundException{
 		Long userId = userIdService.getCurrentUserId(p);
 		
 		if(userId == null){
-			throw new NoUserFoundException();
+			throw new NoUserFoundException("User could not be found");
 		}
 				
 		List<UserTestCaseGroup> list = testCaseGroupRepository.userExclusive(userId);
@@ -449,7 +545,7 @@ public class HL7V2UploadController {
 			}
 		}
 		
-			return true;
+		return true;
 	}
 	
 	
