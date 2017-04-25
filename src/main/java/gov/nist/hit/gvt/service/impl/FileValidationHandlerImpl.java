@@ -1,6 +1,7 @@
 package gov.nist.hit.gvt.service.impl;
 
 import java.io.File;
+import java.io.InputStream;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -13,9 +14,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import gov.nist.healthcare.resources.domain.XMLError;
-import gov.nist.healthcare.resources.xds.ValidateXSD;
+import gov.nist.healthcare.resources.xds.XMLResourcesValidator;
 import gov.nist.hit.core.service.ResourceLoader;
-import gov.nist.hit.core.service.util.FileUtil;
 import gov.nist.hit.gvt.service.FileValidationHandler;
 
 @Service
@@ -25,45 +25,42 @@ public class FileValidationHandlerImpl implements FileValidationHandler{
 	private ResourceLoader resourceLoader;
 	
 	
-	public List<XMLError> validateProfile(String content) throws Exception{
-		ValidateXSD v = new ValidateXSD();
-		List<XMLError> errors = v.validateProfile(content);
+	public List<XMLError> validateProfile(InputStream contentIS) throws Exception{
+		XMLResourcesValidator v = XMLResourcesValidator.createValidatorFromClasspath("/xsd");
+		List<XMLError> errors = v.validateProfile(contentIS);
 		return errors;
 		
 	}
-	public List<XMLError> validateConstraints(String content) throws Exception{
-		ValidateXSD v = new ValidateXSD();
-		List<XMLError> errors = v.validateConstraints(content);
+	public List<XMLError> validateConstraints(InputStream contentIS) throws Exception{
+		XMLResourcesValidator v = XMLResourcesValidator.createValidatorFromClasspath("/xsd");
+		List<XMLError> errors = v.validateConstraints(contentIS);
 		return errors;
 	}
 	
-	public List<XMLError> validateVocabulary(String content) throws Exception{
-		ValidateXSD v = new ValidateXSD();
-		List<XMLError> errors = v.validateVocabulary(content);
+	public List<XMLError> validateVocabulary(InputStream contentIS) throws Exception{
+		XMLResourcesValidator v = XMLResourcesValidator.createValidatorFromClasspath("/xsd");
+		List<XMLError> errors = v.validateVocabulary(contentIS);
 		return errors;
 	}
 	
 	
 
 	public Map<String, List<XMLError>> unbundleAndValidate(String dir) throws Exception{
-		ValidateXSD v = new ValidateXSD();
+		XMLResourcesValidator v = XMLResourcesValidator.createValidatorFromClasspath("/xsd");
 		Map<String, List<XMLError>> errorsMap = new HashMap<String, List<XMLError>>();
 		resourceLoader.setDirectory(findFileDirectory(dir,"Profile.xml")+"/");
 		
 		// Profile
 		Resource profile = resourceLoader.getResource("Profile.xml");
-		String profileContent = FileUtil.getContent(profile);
-		errorsMap.put("profileErrors",v.validateProfile(profileContent));
+		errorsMap.put("profileErrors",v.validateProfile(profile.getInputStream()));
 		
 		// Constraints
 		Resource constraints = resourceLoader.getResource("Constraints.xml");
-		String constraintsContent = FileUtil.getContent(constraints);
-		errorsMap.put("constraintsErrors",v.validateConstraints(constraintsContent));
+		errorsMap.put("constraintsErrors",v.validateConstraints(constraints.getInputStream()));
 		
 		// VS
 		Resource vs = resourceLoader.getResource("ValueSets.xml");
-		String vsContent = FileUtil.getContent(vs);
-		errorsMap.put("vsErrors",v.validateVocabulary(vsContent));
+		errorsMap.put("vsErrors",v.validateVocabulary(vs.getInputStream()));
 		
 		return errorsMap;
 	}

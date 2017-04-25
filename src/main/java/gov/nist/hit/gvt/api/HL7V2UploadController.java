@@ -12,11 +12,11 @@
 
 package gov.nist.hit.gvt.api;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -28,6 +28,7 @@ import javax.servlet.ServletRequest;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -137,9 +138,14 @@ public class HL7V2UploadController {
 			if (userId == null)
 				throw new NoUserFoundException("User could not be found");
 
-			InputStream in = part.getInputStream();
-			String content = IOUtils.toString(in);
-			List<XMLError> errors = fileValidationHandler.validateProfile(content);
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			org.apache.commons.io.IOUtils.copy(part.getInputStream(), baos);
+			byte[] bytes = baos.toByteArray();
+			
+			String content = IOUtils.toString(new ByteArrayInputStream(bytes));
+			List<XMLError> errors = fileValidationHandler.validateProfile(new ByteArrayInputStream(bytes));
+
+			
 
 			if (errors.size() > 0) {
 				resultMap.put("success", false);
@@ -196,9 +202,13 @@ public class HL7V2UploadController {
 			if (userId == null)
 				throw new NoUserFoundException("User could not be found");
 
-			InputStream in = part.getInputStream();
-			String content = IOUtils.toString(in);
-			List<XMLError> errors = fileValidationHandler.validateVocabulary(content);
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			org.apache.commons.io.IOUtils.copy(part.getInputStream(), baos);
+			byte[] bytes = baos.toByteArray();
+			String content = IOUtils.toString(new ByteArrayInputStream(bytes));
+			List<XMLError> errors = fileValidationHandler.validateVocabulary(new ByteArrayInputStream(bytes));
+
+			
 
 			if (errors.size() > 0) {
 				resultMap.put("success", false);
@@ -252,9 +262,13 @@ public class HL7V2UploadController {
 			if (userId == null)
 				throw new NoUserFoundException("User could not be found");
 
-			InputStream in = part.getInputStream();
-			String content = IOUtils.toString(in);
-			List<XMLError> errors = fileValidationHandler.validateConstraints(content);
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			org.apache.commons.io.IOUtils.copy(part.getInputStream(), baos);
+			byte[] bytes = baos.toByteArray();
+			String content = IOUtils.toString(new ByteArrayInputStream(bytes));
+			List<XMLError> errors = fileValidationHandler.validateConstraints(new ByteArrayInputStream(bytes));
+
+			
 
 			if (errors.size() > 0) {
 				resultMap.put("success", false);
@@ -287,7 +301,7 @@ public class HL7V2UploadController {
 	}
 	
 	/**
-	 * Uploads zip file from remote and stores it in a temporary directory
+	 * Uploads zip file and stores it in a temporary directory
 	 * @param request Client request
 	 * @param part Zip file
 	 * @param p Principal
@@ -297,7 +311,7 @@ public class HL7V2UploadController {
 	@PreAuthorize("hasRole('tester')")
 	@RequestMapping(value = "/uploadZip", method = RequestMethod.POST, consumes = { "multipart/form-data" })
 	@ResponseBody
-	public Map<String, Object> remoteUploadZip(ServletRequest request, @RequestPart("file") MultipartFile part, Principal p)
+	public Map<String, Object> uploadZip(ServletRequest request, @RequestPart("file") MultipartFile part, Principal p)
 			throws MessageUploadException {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
 		try {
@@ -362,7 +376,7 @@ public class HL7V2UploadController {
 	@PreAuthorize("hasRole('tester')")
 	@RequestMapping(value = "uploadedProfiles", method = RequestMethod.POST)
 	@ResponseBody
-	public Map<String, Object> remoteUploadedProfiles(ServletRequest request,@RequestBody Token token, Principal p)
+	public Map<String, Object> uploadedProfiles(ServletRequest request,@RequestBody Token token, Principal p)
 			throws MessageUploadException {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
 		try {
@@ -385,7 +399,7 @@ public class HL7V2UploadController {
 			resultMap.put("success", true);
 			resultMap.put("profiles", list);	
 
-			logger.info("retrieved profile info from remote upload");
+			logger.info("retrieved profile info from upload");
 
 			
 		} catch (NoUserFoundException e) {

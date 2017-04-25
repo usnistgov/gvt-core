@@ -84,6 +84,6 @@
 
 	<properties>
 		<hitcorehl7v2.version>1.0.15-SNAPSHOT</hitcorehl7v2.version>
-		<resourcesValidation.version>0.0.3</resourcesValidation.version>
+		<resourcesValidation.version>1.0.1</resourcesValidation.version>
 	</properties>
 </project>
