@@ -8,18 +8,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import gov.nist.hit.core.domain.UserTestCaseGroup;
+import gov.nist.hit.core.domain.CFTestPlan;
 
 @Repository
-public interface UserTestCaseGroupRepository extends JpaRepository<UserTestCaseGroup, Long> {
+public interface UserTestCaseGroupRepository extends JpaRepository<CFTestPlan, Long> {
 
-	public List<UserTestCaseGroup> findByPreloaded(boolean preloaded);
+	public List<CFTestPlan> findByPreloaded(boolean preloaded);
 	
-	@Query("select tcg from UserTestCaseGroup tcg where tcg.userId = :userId and preloaded = false")
-	public List<UserTestCaseGroup> userExclusive(@Param("userId") Long id);
+	@Query("select tcg from CFTestPlan tcg where tcg.authorUsername = :authorUsername and preloaded = false and scope = 'USER'")
+	public List<CFTestPlan> userExclusive(@Param("authorUsername") String authorUsername);
 	
 	@Modifying
-	@Query("delete UserTestCaseGroup  where id = :id")
-	public int deleteUserTestCaseGroup(@Param("id") Long id);
+	@Query("delete CFTestPlan  where id = :id")
+	public int deleteUserTestCaseGroup(@Param("id") String id);
 	
 }

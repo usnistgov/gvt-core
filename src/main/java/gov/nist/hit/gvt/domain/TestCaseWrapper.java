@@ -9,6 +9,7 @@ public class TestCaseWrapper {
 	private String testcasename;
 	private String testcasedescription;
 	private String token;
+	private Long groupId;
 	
 	
 	public TestCaseWrapper() {
@@ -31,6 +32,18 @@ public class TestCaseWrapper {
 		this.testcasename = testcasename;
 		this.testcasedescription = testcasedescription;
 		this.token = token;
+	}
+	
+	
+
+
+	public TestCaseWrapper(List<UploadedProfileModel> testcases, String testcasename, String testcasedescription,String token, Long groupId) {
+		super();
+		this.testcases = testcases;
+		this.testcasename = testcasename;
+		this.testcasedescription = testcasedescription;
+		this.token = token;
+		this.groupId = groupId;
 	}
 
 
@@ -57,6 +70,12 @@ public class TestCaseWrapper {
 	}
 	public void setToken(String token) {
 		this.token = token;
+	}
+	public Long getGroupId() {
+		return groupId;
+	}
+	public void setGroupId(Long groupId) {
+		this.groupId = groupId;
 	}
 	
 	

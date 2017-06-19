@@ -6,13 +6,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import gov.nist.hit.core.domain.UserCFTestInstance;
+import gov.nist.hit.core.domain.CFTestStep;
 
 @Repository
-public interface UserCFTestInstanceRepository extends JpaRepository<UserCFTestInstance, Long> {
+public interface UserCFTestInstanceRepository extends JpaRepository<CFTestStep, Long> {
 
 	@Modifying
-	@Query("delete UserCFTestInstance  where id = :id")
+	@Query("delete CFTestStep  where id = :id")
 	public int deleteCFTestInstance(@Param("id") Long id);
 	
 }

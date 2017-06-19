@@ -1,7 +1,10 @@
 package gov.nist.hit.gvt.service.impl;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -9,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -25,21 +29,52 @@ public class FileValidationHandlerImpl implements FileValidationHandler{
 	private ResourceLoader resourceLoader;
 	
 	
-	public List<XMLError> validateProfile(InputStream contentIS) throws Exception{
-		XMLResourcesValidator v = XMLResourcesValidator.createValidatorFromClasspath("/xsd");
-		List<XMLError> errors = v.validateProfile(contentIS);
+	public List<XMLError> validateProfile(String contentTxt,InputStream contentIS) throws Exception{
+		//Check if not a Constraint file or Value Set file
+		List<XMLError> errors = new ArrayList<XMLError>();
+		if (contentTxt.contains("<ConformanceContext")){
+			XMLError error = new XMLError(0, 0, "File is a Constraint file.");
+			errors.add(error);
+		}else if (contentTxt.contains("<ValueSetLibrary")){
+			XMLError error = new XMLError(0, 0, "File is a Value Set file.");
+			errors.add(error);
+		}else{
+			XMLResourcesValidator v = XMLResourcesValidator.createValidatorFromClasspath("/xsd");
+			errors = v.validateProfile(contentIS);
+		}
+
 		return errors;
 		
 	}
-	public List<XMLError> validateConstraints(InputStream contentIS) throws Exception{
-		XMLResourcesValidator v = XMLResourcesValidator.createValidatorFromClasspath("/xsd");
-		List<XMLError> errors = v.validateConstraints(contentIS);
+	public List<XMLError> validateConstraints(String contentTxt,InputStream contentIS) throws Exception{
+		//Check if not a Profile file or Value Set file
+		List<XMLError> errors = new ArrayList<XMLError>();
+		if (contentTxt.contains("<ConformanceProfile")){
+			XMLError error = new XMLError(0, 0, "File is a Profile file.");
+			errors.add(error);
+		}else if (contentTxt.contains("<ValueSetLibrary")){
+			XMLError error = new XMLError(0, 0, "File is a Value Set file.");
+			errors.add(error);
+		}else{
+			XMLResourcesValidator v = XMLResourcesValidator.createValidatorFromClasspath("/xsd");
+			errors = v.validateConstraints(contentIS);
+		}
 		return errors;
 	}
 	
-	public List<XMLError> validateVocabulary(InputStream contentIS) throws Exception{
-		XMLResourcesValidator v = XMLResourcesValidator.createValidatorFromClasspath("/xsd");
-		List<XMLError> errors = v.validateVocabulary(contentIS);
+	public List<XMLError> validateVocabulary(String contentTxt,InputStream contentIS) throws Exception{
+		//Check if not a Profile file or Constraint file
+		List<XMLError> errors = new ArrayList<XMLError>();
+		if (contentTxt.contains("<ConformanceProfile")){
+			XMLError error = new XMLError(0, 0, "File is a Profile file.");
+			errors.add(error);
+		}else if (contentTxt.contains("<ConformanceContext")){
+			XMLError error = new XMLError(0, 0, "File is a Constraint file.");
+			errors.add(error);
+		}else{
+			XMLResourcesValidator v = XMLResourcesValidator.createValidatorFromClasspath("/xsd");
+			errors = v.validateVocabulary(contentIS);
+		}
 		return errors;
 	}
 	
@@ -76,5 +111,9 @@ public class FileValidationHandlerImpl implements FileValidationHandler{
 		}
 		return null;
 	}
+	
+	
+
+	
 	
 }

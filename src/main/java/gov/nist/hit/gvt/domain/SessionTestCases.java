@@ -2,24 +2,24 @@ package gov.nist.hit.gvt.domain;
 
 import java.util.List;
 
-import gov.nist.hit.core.domain.UserTestCaseGroup;
+import gov.nist.hit.core.domain.CFTestPlan;
 
 public class SessionTestCases {
 	
-	private List<UserTestCaseGroup> preloaded;
-	private List<UserTestCaseGroup> user;
+	private List<CFTestPlan> preloaded;
+	private List<CFTestPlan> user;
 	
 
-	public List<UserTestCaseGroup> getPreloaded() {
+	public List<CFTestPlan> getPreloaded() {
 		return preloaded;
 	}
-	public void setPreloaded(List<UserTestCaseGroup> preloaded) {
+	public void setPreloaded(List<CFTestPlan> preloaded) {
 		this.preloaded = preloaded;
 	}
-	public List<UserTestCaseGroup> getUser() {
+	public List<CFTestPlan> getUser() {
 		return user;
 	}
-	public void setUser(List<UserTestCaseGroup> user) {
+	public void setUser(List<CFTestPlan> user) {
 		this.user = user;
 	}
 	

@@ -47,9 +47,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import gov.nist.healthcare.resources.domain.XMLError;
+import gov.nist.hit.core.domain.CFTestPlan;
+import gov.nist.hit.core.domain.CFTestStep;
 import gov.nist.hit.core.domain.ResourceUploadResult;
-import gov.nist.hit.core.domain.UserCFTestInstance;
-import gov.nist.hit.core.domain.UserTestCaseGroup;
+import gov.nist.hit.core.domain.TestPlan;
 import gov.nist.hit.core.hl7v2.service.HL7V2ProfileParserImpl;
 import gov.nist.hit.core.repo.ConstraintsRepository;
 import gov.nist.hit.core.repo.IntegrationProfileRepository;
@@ -134,8 +135,8 @@ public class HL7V2UploadController {
 			if (!part.getContentType().equalsIgnoreCase("text/xml"))
 				throw new MessageUploadException("Unsupported content type. Supported content types are: '.xml' ");
 
-			Long userId = userIdService.getCurrentUserId(p);
-			if (userId == null)
+			String userName = userIdService.getCurrentUserName(p);
+			if (userName == null)
 				throw new NoUserFoundException("User could not be found");
 
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -143,7 +144,7 @@ public class HL7V2UploadController {
 			byte[] bytes = baos.toByteArray();
 			
 			String content = IOUtils.toString(new ByteArrayInputStream(bytes));
-			List<XMLError> errors = fileValidationHandler.validateProfile(new ByteArrayInputStream(bytes));
+			List<XMLError> errors = fileValidationHandler.validateProfile(content,new ByteArrayInputStream(bytes));
 
 			
 
@@ -156,7 +157,7 @@ public class HL7V2UploadController {
 				resultMap.put("success", true);
 				resultMap.put("profiles", list);
 
-				File profileFile = new File(tmpDir+ "/" + userId  + "/" + token + "/Profile.xml");
+				File profileFile = new File(tmpDir+ "/" + userName  + "/" + token + "/Profile.xml");
 				FileUtils.writeStringToFile(profileFile, content);
 				logger.info("Uploaded valid profile file " + part.getName());
 			}
@@ -198,15 +199,15 @@ public class HL7V2UploadController {
 			if (!part.getContentType().equalsIgnoreCase("text/xml"))
 				throw new MessageUploadException("Unsupported content type. Supported content types are: '.xml' ");
 
-			Long userId = userIdService.getCurrentUserId(p);
-			if (userId == null)
+			String userName = userIdService.getCurrentUserName(p);
+			if (userName == null)
 				throw new NoUserFoundException("User could not be found");
 
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			org.apache.commons.io.IOUtils.copy(part.getInputStream(), baos);
 			byte[] bytes = baos.toByteArray();
 			String content = IOUtils.toString(new ByteArrayInputStream(bytes));
-			List<XMLError> errors = fileValidationHandler.validateVocabulary(new ByteArrayInputStream(bytes));
+			List<XMLError> errors = fileValidationHandler.validateVocabulary(content,new ByteArrayInputStream(bytes));
 
 			
 
@@ -217,7 +218,7 @@ public class HL7V2UploadController {
 			} else {
 				resultMap.put("success", true);
 
-				File vsFile = new File(tmpDir+ "/" + userId  + "/" + token + "/ValueSets.xml");
+				File vsFile = new File(tmpDir+ "/" + userName  + "/" + token + "/ValueSets.xml");
 				FileUtils.writeStringToFile(vsFile, content);
 				logger.info("Uploaded value set file " + part.getName());
 			}
@@ -258,15 +259,15 @@ public class HL7V2UploadController {
 			if (!part.getContentType().equalsIgnoreCase("text/xml"))
 				throw new MessageUploadException("Unsupported content type. Supported content types are: '.xml' ");
 
-			Long userId = userIdService.getCurrentUserId(p);
-			if (userId == null)
+			String userName = userIdService.getCurrentUserName(p);
+			if (userName == null)
 				throw new NoUserFoundException("User could not be found");
 
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			org.apache.commons.io.IOUtils.copy(part.getInputStream(), baos);
 			byte[] bytes = baos.toByteArray();
 			String content = IOUtils.toString(new ByteArrayInputStream(bytes));
-			List<XMLError> errors = fileValidationHandler.validateConstraints(new ByteArrayInputStream(bytes));
+			List<XMLError> errors = fileValidationHandler.validateConstraints(content,new ByteArrayInputStream(bytes));
 
 			
 
@@ -277,7 +278,7 @@ public class HL7V2UploadController {
 			} else {
 				resultMap.put("success", true);
 
-				File constraintFile = new File(tmpDir+ "/" + userId + "/" + token + "/Constraints.xml");
+				File constraintFile = new File(tmpDir+ "/" + userName + "/" + token + "/Constraints.xml");
 				FileUtils.writeStringToFile(constraintFile, content);
 				logger.info("Uploaded constraints file " + part.getName());
 			}
@@ -318,14 +319,14 @@ public class HL7V2UploadController {
 			if (!part.getContentType().equalsIgnoreCase("application/zip"))
 				throw new MessageUploadException("Unsupported content type. Supported content types are: '.zip' ");
 
-			Long userId = userIdService.getCurrentUserId(p);
-			if (userId == null)
+			String userName = userIdService.getCurrentUserName(p);
+			if (userName == null)
 				throw new NoUserFoundException("User could not be found");
 
 
 
 			String token =  UUID.randomUUID().toString();
-			String directory = bundleHandler.unzip(part.getBytes(),tmpDir+ "/" + userId + "/" + token);
+			String directory = bundleHandler.unzip(part.getBytes(),tmpDir+ "/" + userName + "/" + token);
 			Map<String, List<XMLError>> errorMap = fileValidationHandler.unbundleAndValidate(directory);
 			
 
@@ -381,11 +382,11 @@ public class HL7V2UploadController {
 		Map<String, Object> resultMap = new HashMap<String, Object>();
 		try {
 
-			Long userId = userIdService.getCurrentUserId(p);
-			if (userId == null)
+			String userName = userIdService.getCurrentUserName(p);
+			if (userName == null)
 				throw new NoUserFoundException("User could not be found");
 
-			String directory = tmpDir+ "/" + userId + "/" + token.getToken();
+			String directory = tmpDir+ "/" + userName + "/" + token.getToken();
 			if (!new File(directory).exists())
 				throw new NotValidToken("The provided token is not valid for this account.");
 			
@@ -433,8 +434,8 @@ public class HL7V2UploadController {
 	@ResponseBody
 	public UploadStatus addProfiles(ServletRequest request, @RequestBody TestCaseWrapper wrapper, Principal p) {
 		try {
-			Long userId = userIdService.getCurrentUserId(p);
-			if (userId == null)
+			String userName = userIdService.getCurrentUserName(p);
+			if (userName == null)
 				throw new NoUserFoundException("User could not be found");
 				
 			// Create needed files
@@ -455,10 +456,10 @@ public class HL7V2UploadController {
 			}
 			testCaseJson.put("testCases", testSteps);
 			
-			File jsonFile = new File(tmpDir+ "/" + userId + "/"  + wrapper.getToken() + "/TestCases.json");
-			File profileFile = new File(tmpDir+ "/" + userId + "/"  + wrapper.getToken() + "/Profile.xml");
-			File constraintsFile = new File(tmpDir+ "/" + userId + "/"  + wrapper.getToken() + "/Constraints.xml");
-			File vsFile = new File(tmpDir+ "/" + userId + "/"  + wrapper.getToken() + "/ValueSets.xml");
+			File jsonFile = new File(tmpDir+ "/" + userName + "/"  + wrapper.getToken() + "/TestCases.json");
+			File profileFile = new File(tmpDir+ "/" + userName + "/"  + wrapper.getToken() + "/Profile.xml");
+			File constraintsFile = new File(tmpDir+ "/" + userName + "/"  + wrapper.getToken() + "/Constraints.xml");
+			File vsFile = new File(tmpDir+ "/" + userName + "/"  + wrapper.getToken() + "/ValueSets.xml");
 			
 			if (constraintsFile != null) {
 				packagingHandler.changeConstraintId(constraintsFile);
@@ -476,13 +477,27 @@ public class HL7V2UploadController {
 			FileUtils.writeStringToFile(jsonFile, testCaseJson.toString());
 
 			// Use files to save to database
-			GVTSaveInstance si = bundleHandler.createGVTSaveInstance(tmpDir+ "/" + userId + "/"  + wrapper.getToken());
+			GVTSaveInstance si;
+			if (wrapper.getGroupId() == null){
+				si = bundleHandler.createGVTSaveInstance(tmpDir+ "/" + userName + "/"  + wrapper.getToken());
+				List<CFTestPlan> list = testCaseGroupRepository.userExclusive(userName);
+				si.tcg.setPosition(list.size()+1);
+			}else{
+				CFTestPlan tp = testCaseGroupRepository.findOne(wrapper.getGroupId());
+				if (tp == null){
+					throw new Exception("Profile Group could not be found");
+				}
+				si = bundleHandler.createGVTSaveInstance(tmpDir+ "/" + userName + "/"  + wrapper.getToken(),tp);
+			}
+			
 			ipRepository.save(si.ip);
 			csRepository.save(si.ct);
 			vsRepository.save(si.vs);
-			si.tcg.setUserId(userId);
+			si.tcg.setAuthorUsername(userName);
+			
+			
 			testCaseGroupRepository.saveAndFlush(si.tcg);
-			FileUtils.deleteDirectory(new File(tmpDir+ "/" + userId + "/"  + wrapper.getToken()));
+			FileUtils.deleteDirectory(new File(tmpDir+ "/" + userName + "/"  + wrapper.getToken()));
 			return new UploadStatus(ResourceUploadResult.SUCCESS, "Test Cases Group has been added");
 
 		} catch (IOException e) {
@@ -536,17 +551,17 @@ public class HL7V2UploadController {
 	@ResponseBody
 	@Transactional(value = "transactionManager")
 	public boolean deleteProfile(ServletRequest request, @RequestBody LongResult lr, Principal p) throws NoUserFoundException{
-		Long userId = userIdService.getCurrentUserId(p);
+		String userName = userIdService.getCurrentUserName(p);
 		
-		if(userId == null){
+		if(userName == null){
 			throw new NoUserFoundException("User could not be found");
 		}
 				
-		List<UserTestCaseGroup> list = testCaseGroupRepository.userExclusive(userId);
-		for (UserTestCaseGroup utg : list){
+		List<CFTestPlan> list = testCaseGroupRepository.userExclusive(userName);
+		for (CFTestPlan utg : list){
 			
-			for (Iterator<UserCFTestInstance> iterator =  utg.getTestCases().iterator(); iterator.hasNext();) {
-				UserCFTestInstance ucf = iterator.next();
+			for (Iterator<CFTestStep> iterator =  utg.getTestCases().iterator(); iterator.hasNext();) {
+				CFTestStep ucf = iterator.next();
 				if (ucf.getId().equals(lr.getId())){
 					 iterator.remove();
 				}

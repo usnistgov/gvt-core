@@ -24,4 +24,13 @@ public class UserIdServiceImpl implements UserIdService{
 		return null;
 	}
 	
+	@Override
+	public String getCurrentUserName(Principal p) {
+		Account a = accountService.findByTheAccountsUsername(p.getName());
+		if(a != null && !a.isPending() && !a.isGuestAccount()){
+			return a.getUsername();
+		}
+		return null;
+	}
+	
 }
