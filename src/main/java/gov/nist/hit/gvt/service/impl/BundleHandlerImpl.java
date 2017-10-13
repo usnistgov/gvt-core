@@ -28,6 +28,7 @@ import gov.nist.hit.core.domain.ConformanceProfile;
 import gov.nist.hit.core.domain.Constraints;
 import gov.nist.hit.core.domain.IntegrationProfile;
 import gov.nist.hit.core.domain.TestScope;
+import gov.nist.hit.core.domain.TestingStage;
 import gov.nist.hit.core.domain.VocabularyLibrary;
 import gov.nist.hit.core.hl7v2.domain.HL7V2TestContext;
 import gov.nist.hit.core.service.ResourceLoader;
@@ -162,6 +163,7 @@ public class BundleHandlerImpl implements BundleHandler {
 			testContext.setConstraints(c);	
 			testContext.setConformanceProfile(conformanceProfile);
 			testContext.setDqa(false); 
+			testContext.setStage(TestingStage.CF);
 			
 			//---
 			cfti.setName(name);
@@ -254,7 +256,8 @@ public class BundleHandlerImpl implements BundleHandler {
 			testContext.setVocabularyLibrary(v); 
 			testContext.setConstraints(c);	
 			testContext.setConformanceProfile(conformanceProfile);
-			testContext.setDqa(false); 
+			testContext.setDqa(false);
+			testContext.setStage(TestingStage.CF);
 			
 			//---
 			cfti.setName(name);

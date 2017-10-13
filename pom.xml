@@ -83,7 +83,7 @@
 	</distributionManagement>
 
 	<properties>
-		<hitcorehl7v2.version>1.0.15-SNAPSHOT</hitcorehl7v2.version>
+		<hitcorehl7v2.version>1.0.19-SNAPSHOT</hitcorehl7v2.version>
 		<resourcesValidation.version>1.0.1</resourcesValidation.version>
 	</properties>
 </project>

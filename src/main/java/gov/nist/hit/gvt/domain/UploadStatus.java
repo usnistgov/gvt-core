@@ -9,6 +9,7 @@ public class UploadStatus {
 	private ResourceUploadResult status;
 	private String message;
 	private String debugError;
+	private Long testPlanId;
 	
 	
 	
@@ -18,6 +19,15 @@ public class UploadStatus {
 	}
 	
 	
+	
+	public UploadStatus(ResourceUploadResult status, String message, String debugError, Long testPlanId) {
+		super();
+		this.status = status;
+		this.message = message;
+		this.debugError = debugError;
+		this.testPlanId = testPlanId;
+	}
+
 	public UploadStatus(ResourceUploadResult status, String message, String debugError) {
 		super();
 		this.status = status;
@@ -25,6 +35,13 @@ public class UploadStatus {
 		this.debugError = debugError;
 	}
 	
+	public UploadStatus(ResourceUploadResult status, String message, Long testPlanId) {
+		super();
+		this.status = status;
+		this.message = message;
+		this.debugError = null;
+		this.testPlanId = testPlanId;
+	}
 	public UploadStatus(ResourceUploadResult status, String message) {
 		super();
 		this.status = status;
@@ -54,6 +71,18 @@ public class UploadStatus {
 
 	public void setDebugError(String debugError) {
 		this.debugError = debugError;
+	}
+
+
+
+	public Long getTestPlanId() {
+		return testPlanId;
+	}
+
+
+
+	public void setTestPlanId(Long testPlanId) {
+		this.testPlanId = testPlanId;
 	}
 
 

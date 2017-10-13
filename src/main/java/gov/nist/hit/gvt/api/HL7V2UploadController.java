@@ -490,6 +490,7 @@ public class HL7V2UploadController {
 				si = bundleHandler.createGVTSaveInstance(tmpDir+ "/" + userName + "/"  + wrapper.getToken(),tp);
 			}
 			
+			
 			ipRepository.save(si.ip);
 			csRepository.save(si.ct);
 			vsRepository.save(si.vs);
@@ -498,7 +499,7 @@ public class HL7V2UploadController {
 			
 			testCaseGroupRepository.saveAndFlush(si.tcg);
 			FileUtils.deleteDirectory(new File(tmpDir+ "/" + userName + "/"  + wrapper.getToken()));
-			return new UploadStatus(ResourceUploadResult.SUCCESS, "Test Cases Group has been added");
+			return new UploadStatus(ResourceUploadResult.SUCCESS, "Test Cases Group has been added",si.tcg.getId());
 
 		} catch (IOException e) {
 			return new UploadStatus(ResourceUploadResult.FAILURE, "IO Error could not read files", ExceptionUtils.getStackTrace(e));
@@ -551,6 +552,7 @@ public class HL7V2UploadController {
 	@ResponseBody
 	@Transactional(value = "transactionManager")
 	public boolean deleteProfile(ServletRequest request, @RequestBody LongResult lr, Principal p) throws NoUserFoundException{
+		boolean res = true;
 		String userName = userIdService.getCurrentUserName(p);
 		
 		if(userName == null){
@@ -558,23 +560,31 @@ public class HL7V2UploadController {
 		}
 				
 		List<CFTestPlan> list = testCaseGroupRepository.userExclusive(userName);
+		boolean found =false;
 		for (CFTestPlan utg : list){
 			
 			for (Iterator<CFTestStep> iterator =  utg.getTestCases().iterator(); iterator.hasNext();) {
 				CFTestStep ucf = iterator.next();
 				if (ucf.getId().equals(lr.getId())){
 					 iterator.remove();
+					 found = true;
 				}
 			}
-							
-			if (utg.getTestCases().size() == 0 ){
-				testCaseGroupRepository.delete(utg);
-			}else{
-				testCaseGroupRepository.save(utg);
+			if (found){
+				if (utg.getTestCases().size() == 0 ){
+					testCaseGroupRepository.delete(utg);
+					res = true;
+				}else{
+					testCaseGroupRepository.save(utg);
+					res = false;
+				}
+				break;
 			}
+			
 		}
 		
-		return true;
+		//return true if testPlan is also deleted, false otherwise 
+		return res;
 	}
 	
 	
