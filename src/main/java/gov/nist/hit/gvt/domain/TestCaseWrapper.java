@@ -10,6 +10,7 @@ public class TestCaseWrapper {
 	private String testcasedescription;
 	private String token;
 	private Long groupId;
+	private String scope;
 	
 	
 	public TestCaseWrapper() {
@@ -26,24 +27,26 @@ public class TestCaseWrapper {
 	
 	
 	
-	public TestCaseWrapper(List<UploadedProfileModel> testcases, String testcasename, String testcasedescription, String token) {
+	public TestCaseWrapper(List<UploadedProfileModel> testcases, String testcasename, String testcasedescription, String token, String scope) {
 		super();
 		this.testcases = testcases;
 		this.testcasename = testcasename;
 		this.testcasedescription = testcasedescription;
 		this.token = token;
+		this.scope = scope;
 	}
 	
 	
 
 
-	public TestCaseWrapper(List<UploadedProfileModel> testcases, String testcasename, String testcasedescription,String token, Long groupId) {
+	public TestCaseWrapper(List<UploadedProfileModel> testcases, String testcasename, String testcasedescription,String token, Long groupId, String scope) {
 		super();
 		this.testcases = testcases;
 		this.testcasename = testcasename;
 		this.testcasedescription = testcasedescription;
 		this.token = token;
 		this.groupId = groupId;
+		this.scope = scope;
 	}
 
 
@@ -77,6 +80,17 @@ public class TestCaseWrapper {
 	public void setGroupId(Long groupId) {
 		this.groupId = groupId;
 	}
+
+
+	public String getScope() {
+		return scope;
+	}
+
+
+	public void setScope(String scope) {
+		this.scope = scope;
+	}
+	
 	
 	
 }

@@ -89,9 +89,7 @@ public class BundleHandlerImpl implements BundleHandler {
 		
 		
 		CFTestPlan gtcg = new CFTestPlan();
-		gtcg.setScope(TestScope.USER);
 		gtcg.setPersistentId(new Random().nextLong());
-		save.tcg = gtcg;
 		String descriptorContent = FileUtils.readFileToString(testCasesFile);
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode testCasesObj = mapper.readTree(descriptorContent);
@@ -99,7 +97,8 @@ public class BundleHandlerImpl implements BundleHandler {
 		gtcg.setName(testCasesObj.get("name").asText());
 		gtcg.setDescription(testCasesObj.get("description").asText());
 		gtcg.setPreloaded(false);
-		
+		gtcg.setScope(testCasesObj.get("scope") != null && testCasesObj.get("scope").asText() != null ? TestScope.valueOf(testCasesObj.get("scope").asText()): TestScope.USER);
+		save.tcg = gtcg;
 		 
 		// Profile
 		String profileName = testCasesObj.findValue("profile").asText();
@@ -140,7 +139,7 @@ public class BundleHandlerImpl implements BundleHandler {
 			JsonNode tcO = testCasesIter.next();
 			CFTestStep cfti = new CFTestStep();
 			cfti.setPreloaded(false);
-			cfti.setScope(TestScope.USER);
+			cfti.setScope(tcO.get("scope") != null && tcO.get("scope").asText() != null ? TestScope.valueOf(tcO.get("scope").asText()): TestScope.USER);
 			cfti.setPosition(i++);
 			String messageId = tcO.findValue("messageId").asText();
 			String name = tcO.findValue("name").asText();
@@ -159,7 +158,7 @@ public class BundleHandlerImpl implements BundleHandler {
 			conformanceProfile.setSourceId(messageId);
 			//---
 			HL7V2TestContext testContext = new HL7V2TestContext();
-			testContext.setVocabularyLibrary(v); 
+ 			testContext.setVocabularyLibrary(v); 
 			testContext.setConstraints(c);	
 			testContext.setConformanceProfile(conformanceProfile);
 			testContext.setDqa(false); 
@@ -170,8 +169,7 @@ public class BundleHandlerImpl implements BundleHandler {
 			cfti.setDescription(description);
 //			cfti.setRoot(true);
 			cfti.setTestContext(testContext);
-			cfti.setPersistentId(id);
-			cfti.setScope(TestScope.USER);
+			cfti.setPersistentId(id); 
 			//---
 			testCases.add(cfti);
 		}
@@ -234,7 +232,7 @@ public class BundleHandlerImpl implements BundleHandler {
 			JsonNode tcO = testCasesIter.next();
 			CFTestStep cfti = new CFTestStep();
 			cfti.setPreloaded(false);
-			cfti.setScope(TestScope.USER);
+			cfti.setScope(tcO.get("scope") != null && tcO.get("scope").asText() != null ? TestScope.valueOf(tcO.get("scope").asText()): TestScope.USER);
 			cfti.setPosition(i++);
 			String messageId = tcO.findValue("messageId").asText();
 			String name = tcO.findValue("name").asText();
@@ -265,7 +263,6 @@ public class BundleHandlerImpl implements BundleHandler {
 //			cfti.setRoot(true);
 			cfti.setTestContext(testContext);
 			cfti.setPersistentId(id);
-			cfti.setScope(TestScope.USER);
 			//---
 			tp.getTestCases().add(cfti);
 		}
