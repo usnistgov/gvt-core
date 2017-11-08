@@ -18,10 +18,14 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.Principal;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.servlet.ServletRequest;
@@ -37,6 +41,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.GrantedAuthoritiesContainer;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -62,6 +69,7 @@ import gov.nist.hit.core.repo.VocabularyLibraryRepository;
 import gov.nist.hit.core.service.AccountService;
 import gov.nist.hit.core.service.CFTestPlanService;
 import gov.nist.hit.core.service.ProfileParser;
+import gov.nist.hit.core.service.UserService;
 import gov.nist.hit.core.service.exception.MessageUploadException;
 import gov.nist.hit.gvt.domain.GVTSaveInstance;
 import gov.nist.hit.gvt.domain.LongResult;
@@ -92,7 +100,9 @@ public class HL7V2UploadController {
 
 	private final String tmpDir = new File(System.getProperty("java.io.tmpdir")).getAbsolutePath() + "/gvt";
 
-	ProfileParser parser = new HL7V2ProfileParserImpl();
+	ProfileParser parser = new HL7V2ProfileParserImpl(); 
+	
+	Set<String> GLOBAL_AUTHORITIES = new HashSet<>(Arrays.asList("supervisor", "admin"));
 
 	@Autowired
 	private CFTestPlanService tpService;
@@ -122,8 +132,11 @@ public class HL7V2UploadController {
 	private FileValidationHandler fileValidationHandler;
 
 	@Autowired
-	private AccountService userService;
-	
+	private AccountService accountService;
+
+	@Autowired
+	private UserService userService;
+
 	/**
 	 * Upload a single XML profile file and may returns errors
 	 * 
@@ -442,6 +455,20 @@ public class HL7V2UploadController {
 		return resultMap;
 	}
 
+	private boolean hasGlobalAuthorities(String username) throws NoUserFoundException {
+		User user = userService.retrieveUserByUsername(username);
+		if (user == null) {
+			throw new NoUserFoundException("User could not be found");
+		}
+		Collection<GrantedAuthority> authorit = user.getAuthorities();
+		for (GrantedAuthority auth : authorit) {
+			if (GLOBAL_AUTHORITIES.contains(auth.getAuthority())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * Add selected profiles to the database
 	 * 
@@ -457,22 +484,19 @@ public class HL7V2UploadController {
 	@RequestMapping(value = "/addProfiles", method = RequestMethod.POST)
 	@ResponseBody
 	public UploadStatus addProfiles(HttpServletRequest request, @RequestBody TestCaseWrapper wrapper, Principal p) {
-		try { 
-//			String username = null;
-//			Account account  = null;
-//			Long userId = SessionContext.getCurrentUserId(request.getSession(false));
-//			if (userId != null) {
-//				account = userService.findOne(userId);
-//			} 
-//						
-//			if(account != null){
-//				username = account.getUsername();
-//			}
-			
-			TestScope scope = TestScope.valueOf(wrapper.getScope().toUpperCase());
-			String userName = userIdService.getCurrentUserName(p);
-			if (userName == null)
+		try {
+			// String username = null;
+			String username = userIdService.getCurrentUserName(p);
+			if (username == null)
 				throw new NoUserFoundException("User could not be found");
+ 
+			if(wrapper.getScope() == null)
+				throw new NoUserFoundException("Scope not be found");
+
+			TestScope scope = TestScope.valueOf(wrapper.getScope().toUpperCase());
+			if (scope.equals(TestScope.GLOBAL) && !hasGlobalAuthorities(username)) {
+				throw new NoUserFoundException("You do not have the permission to perform this task");
+			}
 
 			// Create needed files
 			JSONObject testCaseJson = new JSONObject();
@@ -481,7 +505,7 @@ public class HL7V2UploadController {
 			testCaseJson.put("profile", "Profile.xml");
 			testCaseJson.put("constraints", "Constraints.xml");
 			testCaseJson.put("vs", "ValueSets.xml");
-			testCaseJson.put("scope",scope);
+			testCaseJson.put("scope", scope);
 
 			JSONArray testSteps = new JSONArray();
 			for (UploadedProfileModel upm : wrapper.getTestcases()) {
@@ -495,10 +519,10 @@ public class HL7V2UploadController {
 			}
 			testCaseJson.put("testCases", testSteps);
 
-			File jsonFile = new File(tmpDir + "/" + userName + "/" + wrapper.getToken() + "/TestCases.json");
-			File profileFile = new File(tmpDir + "/" + userName + "/" + wrapper.getToken() + "/Profile.xml");
-			File constraintsFile = new File(tmpDir + "/" + userName + "/" + wrapper.getToken() + "/Constraints.xml");
-			File vsFile = new File(tmpDir + "/" + userName + "/" + wrapper.getToken() + "/ValueSets.xml");
+			File jsonFile = new File(tmpDir + "/" + username + "/" + wrapper.getToken() + "/TestCases.json");
+			File profileFile = new File(tmpDir + "/" + username + "/" + wrapper.getToken() + "/Profile.xml");
+			File constraintsFile = new File(tmpDir + "/" + username + "/" + wrapper.getToken() + "/Constraints.xml");
+			File vsFile = new File(tmpDir + "/" + username + "/" + wrapper.getToken() + "/ValueSets.xml");
 
 			if (constraintsFile != null) {
 				packagingHandler.changeConstraintId(constraintsFile);
@@ -518,9 +542,9 @@ public class HL7V2UploadController {
 			// Use files to save to database
 			GVTSaveInstance si;
 			if (wrapper.getGroupId() == null) {
-				si = bundleHandler.createGVTSaveInstance(tmpDir + "/" + userName + "/" + wrapper.getToken());
-				List<CFTestPlan> list = tpService.findAllByScopeAndUsername(scope,userName);
-				if(list != null){
+				si = bundleHandler.createGVTSaveInstance(tmpDir + "/" + username + "/" + wrapper.getToken());
+				List<CFTestPlan> list = tpService.findAllByScopeAndUsername(scope, username);
+				if (list != null) {
 					si.tcg.setPosition(list.size() + 1);
 				}
 			} else {
@@ -528,19 +552,19 @@ public class HL7V2UploadController {
 				if (tp == null) {
 					throw new Exception("Profile Group could not be found");
 				}
-				if(!userName.equals(tp.getAuthorUsername())){
+				if (!username.equals(tp.getAuthorUsername())) {
 					throw new Exception("You do not have sufficient right to change this profile group");
 				}
-				si = bundleHandler.createGVTSaveInstance(tmpDir + "/" + userName + "/" + wrapper.getToken(), tp);
+				si = bundleHandler.createGVTSaveInstance(tmpDir + "/" + username + "/" + wrapper.getToken(), tp);
 			}
 
 			ipRepository.save(si.ip);
 			csRepository.save(si.ct);
 			vsRepository.save(si.vs);
-			si.tcg.setAuthorUsername(userName);
+			si.tcg.setAuthorUsername(username);
 
 			testCaseGroupRepository.saveAndFlush(si.tcg);
-			FileUtils.deleteDirectory(new File(tmpDir + "/" + userName + "/" + wrapper.getToken()));
+			FileUtils.deleteDirectory(new File(tmpDir + "/" + username + "/" + wrapper.getToken()));
 			return new UploadStatus(ResourceUploadResult.SUCCESS, "Profile Group has been added", si.tcg.getId());
 
 		} catch (IOException e) {
