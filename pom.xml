@@ -74,17 +74,17 @@
 	<distributionManagement>
 		<repository>
 			<id>releases</id>
-			<url>http://hit-dev.nist.gov:9001/repository/releases/</url>
+			<url>https://hit-nexus.nist.gov/repository/releases/</url>
 		</repository>
 		<snapshotRepository>
 			<id>snapshots</id>
 			<name>Internal Snapshots</name>
-			<url>http://hit-dev.nist.gov:9001/repository/snapshots</url>
+			<url>https://hit-nexus.nist.gov/repository/snapshots</url>
 		</snapshotRepository>
 	</distributionManagement>
 
 	<properties>
-		<hitcorehl7v2.version>1.0.22-SNAPSHOT</hitcorehl7v2.version>
+		<hitcorehl7v2.version>1.0.24-SNAPSHOT</hitcorehl7v2.version>
 		<resourcesValidation.version>1.0.1</resourcesValidation.version>
 		<hitcorexml.version>1.0.0-SNAPSHOT</hitcorexml.version>
 	</properties>
