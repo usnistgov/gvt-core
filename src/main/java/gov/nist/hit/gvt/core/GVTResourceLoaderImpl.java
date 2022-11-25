@@ -48,6 +48,24 @@ public class GVTResourceLoaderImpl extends GVTResourceLoader {
 			String username, boolean preloaded) throws IOException {
 		return hl7v2rb.addOrReplaceIntegrationProfile(rootPath, domain, scope, username, preloaded);
 	}
+	
+	 @Override
+    public List<ResourceUploadStatus> addOrReplaceValueSetBindings(String rootPath, String domain, TestScope scope,
+            String authorUsername, boolean preloaded) throws IOException {
+     return hl7v2rb.addOrReplaceValueSetBindings(rootPath, domain, scope, authorUsername, preloaded);
+    }
+
+    @Override
+    public List<ResourceUploadStatus> addOrReplaceCoConstraints(String rootPath, String domain, TestScope scope,
+            String authorUsername, boolean preloaded) throws IOException {
+        return hl7v2rb.addOrReplaceCoConstraints(rootPath, domain, scope, authorUsername, preloaded);
+    }
+
+    @Override
+    public List<ResourceUploadStatus> addOrReplaceSlicings(String rootPath, String domain, TestScope scope,
+            String authorUsername, boolean preloaded) throws IOException {
+        return hl7v2rb.addOrReplaceSlicings(rootPath, domain, scope, authorUsername, preloaded);
+    }
 
 	@Override
 	public TestContext testContext(String location, JsonNode parentOb, TestingStage stage, String rootPath,
@@ -86,5 +104,7 @@ public class GVTResourceLoaderImpl extends GVTResourceLoader {
 			throws JsonGenerationException, JsonMappingException, IOException, UnsupportedOperationException {		
 		return hl7v2rb.vocabLibrary(content, domain, scope, authorUsername, preloaded);
 	}
+
+   
 
 }
