@@ -83,7 +83,7 @@
 	</distributionManagement>
 
 	<properties>
-		<hitcorehl7v2.version>1.0.24-SNAPSHOT</hitcorehl7v2.version>
+		<hitcorehl7v2.version>1.0.25.ex-SNAPSHOT</hitcorehl7v2.version>
 		<resourcesValidation.version>1.0.1</resourcesValidation.version>
 		<hitcorexml.version>1.0.0-SNAPSHOT</hitcorexml.version>
 	</properties>
