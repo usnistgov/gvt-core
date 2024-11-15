@@ -105,12 +105,13 @@ public class GVTResourceLoaderImpl extends GVTResourceLoader {
 		return hl7v2rb.vocabLibrary(content, domain, scope, authorUsername, preloaded);
 	}
 
-    @Override
+	@Override
     public ProfileModel parseEnhanced(String integrationProfileXml, String conformanceProfileId,
-            String constraintsXml, String additionalConstraintsXml, String valueSetBindings, String coConstraints,
+            String constraintsXml, String additionalConstraintsXml, String valueSets, String valueSetBindings,
+            String coConstraints,
             String slicings) throws ProfileParserException, UnsupportedOperationException {
         return hl7v2rb.parseEnhanced(integrationProfileXml, conformanceProfileId, constraintsXml,
-                additionalConstraintsXml,valueSetBindings, coConstraints, slicings);
+                additionalConstraintsXml, valueSets, valueSetBindings, coConstraints, slicings);
     }
 
    
