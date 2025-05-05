@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>gov.nist.hit.gvt</groupId>
 	<artifactId>gvt-core</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>1.0.1-SNAPSHOT</version>
 	<name>gvt-core</name>
 
 
@@ -13,12 +13,12 @@
 			<artifactId>hit-core-hl7v2-api</artifactId>
 			<version>${hitcorehl7v2.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>gov.nist.healthcare.resources</groupId>
-			<artifactId>validation</artifactId>
-			<version>${resourcesValidation.version}</version>
-		</dependency>
-		<dependency>
+			<dependency>
+	      <groupId>gov.nist.hit.core.xml</groupId>
+	      <artifactId>hit-core-xml-api</artifactId>
+	      <version>${hitcorexml.version}</version>
+	    </dependency>	
+		<dependency>		
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
 			<version>3.1.0</version>
@@ -32,7 +32,7 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-release-plugin</artifactId>
-					<version>2.5.2</version>
+					<version>3.1.1</version>
 				</plugin>
 				<!-- plugin to handle compile version -->
 				<plugin>
@@ -73,17 +73,18 @@
 	<distributionManagement>
 		<repository>
 			<id>releases</id>
-			<url>http://vm-070.nist.gov:8081/nexus/content/repositories/releases</url>
+			<url>https://hit-nexus.nist.gov/repository/releases/</url>
 		</repository>
 		<snapshotRepository>
 			<id>snapshots</id>
 			<name>Internal Snapshots</name>
-			<url>http://vm-070.nist.gov:8081/nexus/content/repositories/snapshots</url>
+			<url>https://hit-nexus.nist.gov/repository/snapshots</url>
 		</snapshotRepository>
 	</distributionManagement>
 
 	<properties>
-		<hitcorehl7v2.version>1.0.15-SNAPSHOT</hitcorehl7v2.version>
-		<resourcesValidation.version>0.0.3</resourcesValidation.version>
+		<hitcorehl7v2.version>1.1.1</hitcorehl7v2.version>
+<!--		<resourcesValidation.version>1.0.1</resourcesValidation.version>-->
+		<hitcorexml.version>1.1.0</hitcorexml.version>
 	</properties>
 </project>
