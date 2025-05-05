@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>gov.nist.hit.gvt</groupId>
 	<artifactId>gvt-core</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>1.0.1-SNAPSHOT</version>
 	<name>gvt-core</name>
 
 
@@ -32,7 +32,7 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-release-plugin</artifactId>
-					<version>2.5.2</version>
+					<version>3.1.1</version>
 				</plugin>
 				<!-- plugin to handle compile version -->
 				<plugin>
@@ -83,8 +83,8 @@
 	</distributionManagement>
 
 	<properties>
-		<hitcorehl7v2.version>1.0.25.ex-SNAPSHOT</hitcorehl7v2.version>
-		<resourcesValidation.version>1.0.1</resourcesValidation.version>
-		<hitcorexml.version>1.0.2.ex-SNAPSHOT</hitcorexml.version>
+		<hitcorehl7v2.version>1.1.1</hitcorehl7v2.version>
+<!--		<resourcesValidation.version>1.0.1</resourcesValidation.version>-->
+		<hitcorexml.version>1.1.0</hitcorexml.version>
 	</properties>
 </project>
