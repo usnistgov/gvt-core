@@ -5,7 +5,11 @@
 	<artifactId>gvt-core</artifactId>
 	<version>1.0.1-SNAPSHOT</version>
 	<name>gvt-core</name>
-
+	
+	<properties>
+		<hitcorehl7v2.version>1.1.1-SNAPSHOT</hitcorehl7v2.version>
+		<hitcorexml.version>1.1.1-SNAPSHOT</hitcorexml.version>
+	</properties>
 
 	<dependencies>
 		<dependency>
@@ -82,9 +86,5 @@
 		</snapshotRepository>
 	</distributionManagement>
 
-	<properties>
-		<hitcorehl7v2.version>1.1.1</hitcorehl7v2.version>
-<!--		<resourcesValidation.version>1.0.1</resourcesValidation.version>-->
-		<hitcorexml.version>1.1.0</hitcorexml.version>
-	</properties>
+
 </project>
